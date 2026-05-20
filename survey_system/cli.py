@@ -15,6 +15,7 @@ from survey_system.llm.client import LLMClient
 from survey_system.ops import (
     assign_section,
     build_bundles,
+    design_schema,
     extract,
     parse_pdf,
     propose_anchors,
@@ -35,6 +36,7 @@ TopicOption = Annotated[Path, typer.Option("--topic", "-t", exists=False, file_o
 BibKeyOption = Annotated[str | None, typer.Option("--bib-key", "-k")]
 LimitOption = Annotated[int | None, typer.Option("--limit", min=1)]
 ForceOption = Annotated[bool, typer.Option("--force")]
+VersionOption = Annotated[str, typer.Option("--version")]
 
 
 def _echo_result(result: OpResult) -> None:
@@ -88,6 +90,12 @@ def topic_validate(topic: TopicOption) -> None:
 def topic_curate_anchors(topic: TopicOption) -> None:
     path = curate_anchors(topic)
     typer.echo(f"Wrote {path}")
+
+
+@topic_app.command("promote-schema")
+def topic_promote_schema(topic: TopicOption, version: VersionOption) -> None:
+    path = design_schema.promote_schema(topic, version)
+    typer.echo(f"Promoted schema {version}; wrote {path}. Re-run extraction with survey run round4 --force.")
 
 
 @run_app.command("parse-pdf")
@@ -179,6 +187,14 @@ def run_anchors(
     force: ForceOption = False,
 ) -> None:
     _echo_result(propose_anchors.propose_anchors(topic, force=force))
+
+
+@run_app.command("schema-design")
+def run_schema_design(
+    topic: TopicOption,
+    force: ForceOption = False,
+) -> None:
+    _echo_result(design_schema.design_schema(topic, force=force))
 
 
 @run_app.command("propose-outline")

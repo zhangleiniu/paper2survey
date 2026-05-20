@@ -1,0 +1,15 @@
+Design the next survey extraction schema from anchor papers.
+
+Return a JSON object matching the requested schema exactly. The schema must include:
+- version: {{next_version}}
+- universal: JSON Schema object for fields shared by every paper
+- by_type: JSON Schema objects for all 8 paper types
+- _provenance: notes about anchor inputs and differences from the prior schema
+
+Keep all by_type schemas compatible with the survey system: each should be an object schema and may include _bundle_fields listing 1 to 4 important fields.
+
+Prior schema:
+{{prior_schema}}
+
+Anchor paper excerpts:
+{{anchor_l0}}

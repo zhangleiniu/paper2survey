@@ -45,3 +45,11 @@
 - The deterministic suggestion rule is: suggest surveys, plus tier-1 papers with `llm_score >= 4`.
 - Curation only promotes rows where `your_decision == yes` into `anchors.csv`. `role_notes` is copied when present, otherwise the LLM reason is used.
 - Downstream anchor weighting remains file-based: if `anchors.csv` exists, outline prompts add `(ANCHOR)` tags and bundles split anchor papers before other papers.
+
+## Phase 7
+
+- Schema design is candidate generation only. The op writes `schemas/schema_v{n+1}.json`; a human reviews and promotes it with `survey topic promote-schema`.
+- Anchor L0 inputs are concatenated into groups with a conservative character cap and group break markers. This preserves the design rule that schema design reads only the anchor set at full L0 granularity.
+- Candidate schemas must include all eight paper types. Missing type-specific schemas are filled from the prior schema before validation.
+- Provenance records anchor keys, generation time, promotion time, and a simple field-level diff from the prior schema.
+- Promoting a schema updates `schemas/current.txt` but does not automatically run extraction. The user reruns `survey run round4 --force` when ready.

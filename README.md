@@ -203,3 +203,28 @@ survey topic curate-anchors --topic tests/fixtures/mini_topic
 This writes `anchors.csv` with `bib_key` and `role_notes`. Later outline prompts
 tag those papers with `(ANCHOR)`, and bundles put anchor papers before other
 papers in each section.
+
+## Phase 7: Automatic Schema Design
+
+Round 3 generates a candidate extraction schema from anchor papers. It reads
+`anchors.csv`, loads each anchor's `L0.md`, compares against the current schema,
+and writes the next candidate file, such as `schemas/schema_v2.json`.
+
+Generate a candidate schema:
+
+```bash
+survey run schema-design --topic tests/fixtures/mini_topic
+```
+
+After human review and edits, promote the selected schema:
+
+```bash
+survey topic promote-schema --topic tests/fixtures/mini_topic --version v2
+```
+
+Promotion updates `schemas/current.txt` and stamps the promoted schema's
+`_provenance.promoted_at`. Re-extraction remains explicit:
+
+```bash
+survey run round4 --topic tests/fixtures/mini_topic --force
+```

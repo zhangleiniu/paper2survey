@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -24,12 +25,23 @@ def current_schema_version(topic_path: Path) -> str:
     return (schemas_dir(topic_path) / "current.txt").read_text(encoding="utf-8").strip()
 
 
+def schema_path(topic_path: Path, version: str) -> Path:
+    return schemas_dir(topic_path) / f"schema_{version}.json"
+
+
+def load_schema_payload(topic_path: Path, version: str) -> dict[str, Any]:
+    with schema_path(topic_path, version).open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
 def load_current_schema(topic_path: Path) -> TopicSchema:
     version = current_schema_version(topic_path)
-    path = schemas_dir(topic_path) / f"schema_{version}.json"
-    with path.open("r", encoding="utf-8") as handle:
-        payload = json.load(handle)
+    payload = load_schema_payload(topic_path, version)
 
+    return topic_schema_from_payload(payload)
+
+
+def topic_schema_from_payload(payload: dict[str, Any]) -> TopicSchema:
     schema = TopicSchema(
         version=str(payload["version"]),
         universal=dict(payload["universal"]),
@@ -39,6 +51,57 @@ def load_current_schema(topic_path: Path) -> TopicSchema:
     if missing:
         raise SchemaValidationError(f"schema is missing paper types: {sorted(missing)}")
     return schema
+
+
+def next_schema_version(topic_path: Path) -> str:
+    current = current_schema_version(topic_path)
+    number = _version_number(current)
+    return f"v{number + 1}"
+
+
+def write_schema_candidate(topic_path: Path, payload: dict[str, Any]) -> Path:
+    topic_schema_from_payload(payload)
+    version = str(payload["version"])
+    directory = schemas_dir(topic_path)
+    directory.mkdir(parents=True, exist_ok=True)
+    path = schema_path(topic_path, version)
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
+def promote_schema(topic_path: Path, version: str) -> Path:
+    path = schema_path(topic_path, version)
+    if not path.exists():
+        raise FileNotFoundError(path)
+    payload = load_schema_payload(topic_path, version)
+    topic_schema_from_payload(payload)
+    provenance = dict(payload.get("_provenance", {}))
+    provenance["promoted_at"] = datetime.now(UTC).isoformat()
+    payload["_provenance"] = provenance
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    current_path = schemas_dir(topic_path) / "current.txt"
+    current_path.write_text(version + "\n", encoding="utf-8")
+    return current_path
+
+
+def diff_schema_payloads(old: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
+    old_universal = set(old.get("universal", {}).get("properties", {}))
+    new_universal = set(new.get("universal", {}).get("properties", {}))
+    by_type: dict[str, Any] = {}
+    for paper_type in sorted(set(old.get("by_type", {})) | set(new.get("by_type", {}))):
+        old_fields = set(old.get("by_type", {}).get(paper_type, {}).get("properties", {}))
+        new_fields = set(new.get("by_type", {}).get(paper_type, {}).get("properties", {}))
+        by_type[paper_type] = {
+            "added": sorted(new_fields - old_fields),
+            "removed": sorted(old_fields - new_fields),
+        }
+    return {
+        "universal": {
+            "added": sorted(new_universal - old_universal),
+            "removed": sorted(old_universal - new_universal),
+        },
+        "by_type": by_type,
+    }
 
 
 def schema_for_paper_type(topic_path: Path, paper_type: str) -> dict[str, Any]:
@@ -108,3 +171,9 @@ def _matches_type(value: Any, expected_type: str) -> bool:
     if expected_type == "boolean":
         return isinstance(value, bool)
     return True
+
+
+def _version_number(version: str) -> int:
+    if not version.startswith("v") or not version[1:].isdigit():
+        raise SchemaValidationError(f"invalid schema version: {version}")
+    return int(version[1:])
