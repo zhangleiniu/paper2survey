@@ -29,3 +29,11 @@
 - Extraction fills `_schema_version` and `_paper_type` in code before validation, so the LLM focuses on the universal and type-specific content.
 - Extraction retries once after schema validation failure, then appends `_review_needed.csv` and leaves `L1.json` unwritten.
 - L2 summarization uses L1 only in this phase to save tokens. It writes the narrative even if it falls outside the 100-400 word soft bound, then flags the paper for review.
+
+## Phase 5
+
+- Round 5 and Round 6 are deliberately separate. The user chooses and edits `outline.md` between candidate generation and section assignment.
+- Outline parsing is a hand-rolled H2/H3 walker. H3 headings are leaf sections; H2 headings become sections only when they have no H3 children. The `Trade-offs` heading is ignored as outline structure.
+- Section assignment accepts only primary section paths that exactly match parsed `outline.md` paths. Invalid primary paths are logged to `_review_needed.csv`.
+- Bundles are plain markdown files, one per parsed section. They contain anchor papers first, then other primary papers sorted by year, followed by cross-references for secondary assignments.
+- Bundle key fields come from the current schema's non-standard `_bundle_fields` list for each paper type, plus the universal L1 block.

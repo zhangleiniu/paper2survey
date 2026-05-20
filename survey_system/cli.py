@@ -167,18 +167,54 @@ def run_propose_anchors(topic: TopicOption) -> None:
 
 
 @run_app.command("propose-outline")
-def run_propose_outline(topic: TopicOption) -> None:
-    _echo_result(propose_outline.propose_outline(topic))
+def run_propose_outline(
+    topic: TopicOption,
+    force: ForceOption = False,
+) -> None:
+    _echo_result(propose_outline.propose_outline(topic, force=force))
+
+
+@run_app.command("round5")
+def run_round5(
+    topic: TopicOption,
+    force: ForceOption = False,
+) -> None:
+    _echo_result(propose_outline.propose_outline(topic, force=force))
 
 
 @run_app.command("assign-section")
-def run_assign_section(topic: TopicOption) -> None:
-    _echo_result(assign_section.assign_section(topic))
+def run_assign_section(
+    topic: TopicOption,
+    bib_key: BibKeyOption = None,
+    limit: LimitOption = None,
+    force: ForceOption = False,
+) -> None:
+    _echo_result(assign_section.assign_section(topic, bib_key=bib_key, limit=limit, force=force))
 
 
 @run_app.command("build-bundles")
-def run_build_bundles(topic: TopicOption) -> None:
-    _echo_result(build_bundles.build_bundles(topic))
+def run_build_bundles(
+    topic: TopicOption,
+    force: ForceOption = False,
+) -> None:
+    _echo_result(build_bundles.build_bundles(topic, force=force))
+
+
+@run_app.command("round6")
+def run_round6(
+    topic: TopicOption,
+    limit: LimitOption = None,
+    force: ForceOption = False,
+) -> None:
+    client = LLMClient.from_topic(topic)
+    assign_result = assign_section.assign_section(
+        topic,
+        limit=limit,
+        force=force,
+        llm_client=client,
+    )
+    bundle_result = build_bundles.build_bundles(topic, force=force)
+    _echo_result(_combine_results("round6", [assign_result, bundle_result]))
 
 
 @run_app.command("noop")

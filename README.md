@@ -151,3 +151,32 @@ Extraction requires `meta.json` from Round 1 and `L0.md` from Round 0. Each
 `L1.json` gets a top-level `_schema_version` so future schema upgrades can detect
 stale extractions. L2 summaries are intended to be 100 to 400 words; outputs
 outside that soft bound are written and flagged in `_review_needed.csv`.
+
+## Phase 5: Outline, Assignment, and Bundles
+
+Phase 5 is the MVP writing-bundle path:
+
+1. Propose human-editable outline candidates.
+2. Save the chosen candidate as `outline.md`.
+3. Assign papers to outline sections.
+4. Build section bundles under `bundles/`.
+
+Propose outlines:
+
+```bash
+survey run round5 --topic tests/fixtures/mini_topic
+survey run propose-outline --topic tests/fixtures/mini_topic --force
+```
+
+After editing or saving `outline.md`, run assignment and bundling:
+
+```bash
+survey run round6 --topic tests/fixtures/mini_topic
+survey run assign-section --topic tests/fixtures/mini_topic --bib-key smith2024widgets
+survey run build-bundles --topic tests/fixtures/mini_topic --force
+```
+
+If `anchors.csv` exists, outline prompts tag those papers with `(ANCHOR)`, and
+bundles list anchor papers before other papers. Bundle entries include the
+paper's `bib_key`, full L2 narrative, and selected key L1 fields from the
+current schema's `_bundle_fields`.

@@ -1,0 +1,8 @@
+Propose 2 to 3 candidate survey outlines for this corpus.
+
+Use H1 headings for each candidate. Within each candidate, use H2 and H3 headings for the outline tree. Include a H2 heading named "Trade-offs" with a paragraph explaining the strengths and weaknesses of that candidate.
+
+Anchor papers, if any, are tagged with (ANCHOR) and should be covered well.
+
+Corpus cards:
+{{corpus_cards}}

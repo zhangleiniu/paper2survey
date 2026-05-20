@@ -1,0 +1,19 @@
+Assign one paper to the best outline section.
+
+Return structured output with:
+- primary_section_path: exactly one section path from the allowed list
+- secondary_section_paths: zero or more other allowed section paths
+- confidence: number from 0 to 1
+- reason: one concise sentence
+
+Allowed section paths:
+{{section_paths}}
+
+Paper metadata:
+{{meta}}
+
+Paper L2:
+{{l2}}
+
+Outline:
+{{outline}}

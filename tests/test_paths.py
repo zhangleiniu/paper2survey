@@ -14,6 +14,10 @@ def test_topic_paths() -> None:
     assert paths.papers_dir(TOPIC) == TOPIC / "papers"
     assert paths.schemas_dir(TOPIC) == TOPIC / "schemas"
     assert paths.bundles_dir(TOPIC) == TOPIC / "bundles"
+    assert paths.outline_path(TOPIC) == TOPIC / "outline.md"
+    assert paths.outline_candidates_path(TOPIC) == TOPIC / "outline_candidates_v1.md"
+    assert paths.section_assignments_path(TOPIC) == TOPIC / "section_assignments_v1.csv"
+    assert paths.anchors_csv(TOPIC) == TOPIC / "anchors.csv"
     assert paths.runs_dir(TOPIC) == TOPIC / "_runs"
 
 

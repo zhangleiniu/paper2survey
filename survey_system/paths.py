@@ -63,6 +63,22 @@ def bundles_dir(topic_path: Path) -> Path:
     return topic_root(topic_path) / "bundles"
 
 
+def outline_path(topic_path: Path) -> Path:
+    return topic_root(topic_path) / "outline.md"
+
+
+def outline_candidates_path(topic_path: Path, version: str = "v1") -> Path:
+    return topic_root(topic_path) / f"outline_candidates_{version}.md"
+
+
+def section_assignments_path(topic_path: Path, version: str = "v1") -> Path:
+    return topic_root(topic_path) / f"section_assignments_{version}.csv"
+
+
+def anchors_csv(topic_path: Path) -> Path:
+    return topic_root(topic_path) / "anchors.csv"
+
+
 def runs_dir(topic_path: Path) -> Path:
     return topic_root(topic_path) / "_runs"
 

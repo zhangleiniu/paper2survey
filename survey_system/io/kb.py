@@ -67,6 +67,10 @@ def write_L2(topic_path: Path, bib_key: str, text: str) -> Path:
     return path
 
 
+def read_L2(topic_path: Path, bib_key: str) -> str:
+    return paper_l2_path(topic_path, bib_key).read_text(encoding="utf-8")
+
+
 def extract_abstract_and_intro(L0_text: str) -> dict[str, str]:
     sections = _markdown_sections(L0_text)
     abstract = sections.get("abstract", "")
