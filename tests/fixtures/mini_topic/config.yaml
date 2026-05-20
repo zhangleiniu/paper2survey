@@ -2,6 +2,10 @@ topic_name: mini_topic
 models:
   cheap: placeholder-cheap
   capable: placeholder-capable
+  triage: placeholder-cheap
+  summarize: placeholder-cheap
+thresholds:
+  triage_confidence_review_below: 0.7
 marker:
   force_ocr: false
   use_llm: false

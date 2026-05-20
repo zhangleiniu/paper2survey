@@ -1,0 +1,12 @@
+Write one 15 to 35 word paper card for corpus-level reasoning.
+
+Use the triage metadata and excerpt below. Mention the paper's main contribution or role, not bibliographic metadata.
+
+Triage metadata:
+{{meta}}
+
+Abstract:
+{{abstract}}
+
+First introduction paragraph:
+{{intro_first_para}}

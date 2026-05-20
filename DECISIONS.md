@@ -13,3 +13,11 @@
 - PDF parsing is idempotent: existing non-empty `L0.md` files are skipped unless `--force` is passed.
 - Marker conversion failures are retried once. A second failure is recorded in `_review_needed.csv`.
 - Short L0 outputs are still written, then flagged for review using `marker.parse_pdf_min_chars`.
+
+## Phase 3
+
+- Round 1 excerpting looks for `# Abstract` and `# Introduction` markdown headings, then uses the abstract plus the first introduction paragraph. If headings are absent, it falls back to the first 2000 characters.
+- Anthropic structured output is forced through `tool_use` with the requested JSON schema as the tool input schema. The provider backend returns the tool input dict to the generic `LLMClient`.
+- Model tiers are resolved from `config.yaml`; operation-specific keys such as `triage` and `summarize` can override the generic `cheap` and `capable` tiers.
+- If triage returns an out-of-enum `paper_type`, the op retries once. A second invalid response writes partial `meta.json` with `paper_type = null`, confidence `0`, preserves any returned TLDR/topics, and appends `_review_needed.csv`.
+- Live LLM tests are opt-in with `RUN_LLM_LIVE=1` so normal tests stay deterministic and offline.

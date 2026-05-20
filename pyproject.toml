@@ -9,6 +9,7 @@ description = "A file-backed survey writing system for iterative paper synthesis
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "anthropic",
     "pydantic>=2",
     "typer",
     "pyyaml",
@@ -28,3 +29,6 @@ include = ["survey_system*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "live: tests that call live external services",
+]

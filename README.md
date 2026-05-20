@@ -83,3 +83,36 @@ The model-backed Marker fixture test is opt-in to keep normal test runs light:
 ```bash
 RUN_MARKER_LIVE=1 pytest tests/test_pdf_marker_backend.py
 ```
+
+## Phase 3: Round 1 Triage and L3 Cards
+
+Round 1 uses the configured cheap LLM model to classify each included paper and
+write:
+
+- `papers/<bib_key>/meta.json`
+- `papers/<bib_key>/L3.txt`
+
+Run triage only:
+
+```bash
+survey run triage --topic tests/fixtures/mini_topic
+survey run triage --topic tests/fixtures/mini_topic --bib-key smith2024widgets
+survey run triage --topic tests/fixtures/mini_topic --limit 1 --force
+```
+
+Run the full Round 1 sequence:
+
+```bash
+survey run round1 --topic tests/fixtures/mini_topic
+```
+
+Round 1 reads only a short L0 excerpt: the abstract and first introduction
+paragraph when markdown headings are available, or the first 2000 characters as
+a fallback. Existing `meta.json` and `L3.txt` files are skipped unless `--force`
+is passed.
+
+The live LLM smoke test is opt-in:
+
+```bash
+RUN_LLM_LIVE=1 ANTHROPIC_API_KEY=... pytest tests/test_llm_client.py -m live
+```

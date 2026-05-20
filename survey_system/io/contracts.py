@@ -35,9 +35,31 @@ class PaperRow(BaseModel):
     user_notes: str = ""
 
 
+PaperType = Literal[
+    "survey",
+    "method",
+    "benchmark",
+    "dataset",
+    "analysis",
+    "position",
+    "application",
+    "tool_system",
+]
+PAPER_TYPES: tuple[str, ...] = (
+    "survey",
+    "method",
+    "benchmark",
+    "dataset",
+    "analysis",
+    "position",
+    "application",
+    "tool_system",
+)
+
+
 class Meta(BaseModel):
-    paper_type: str | None = None
-    paper_type_confidence: float | None = None
+    paper_type: PaperType | None = None
+    paper_type_confidence: float = 0.0
     tldr: str = ""
     topics: list[str] = Field(default_factory=list)
     anchor: bool = False
@@ -60,6 +82,17 @@ class L2(BaseModel):
 class ModelTierConfig(BaseModel):
     cheap: str = "placeholder-cheap"
     capable: str = "placeholder-capable"
+    triage: str | None = None
+    extract: str | None = None
+    summarize: str | None = None
+    schema_design: str | None = None
+    outline: str | None = None
+    assign: str | None = None
+
+
+class ThresholdConfig(BaseModel):
+    triage_confidence_review_below: float = 0.7
+    assign_confidence_review_below: float = 0.7
 
 
 class MarkerConfig(BaseModel):
@@ -72,5 +105,6 @@ class MarkerConfig(BaseModel):
 class TopicConfig(BaseModel):
     topic_name: str
     models: ModelTierConfig = Field(default_factory=ModelTierConfig)
+    thresholds: ThresholdConfig = Field(default_factory=ThresholdConfig)
     marker: MarkerConfig = Field(default_factory=MarkerConfig)
     venue_tiers: dict[str, int] = Field(default_factory=dict)

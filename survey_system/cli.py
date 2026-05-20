@@ -10,6 +10,7 @@ from survey_system.config import load_config
 from survey_system.io.bib import parse_bib_entries
 from survey_system.io.contracts import OpResult
 from survey_system.io.papers import read_papers
+from survey_system.llm.client import LLMClient
 from survey_system.ops import (
     assign_section,
     build_bundles,
@@ -102,8 +103,25 @@ def run_round0(
 
 
 @run_app.command("triage")
-def run_triage(topic: TopicOption) -> None:
-    _echo_result(triage.triage(topic))
+def run_triage(
+    topic: TopicOption,
+    bib_key: BibKeyOption = None,
+    limit: LimitOption = None,
+    force: ForceOption = False,
+) -> None:
+    _echo_result(triage.triage(topic, bib_key=bib_key, limit=limit, force=force))
+
+
+@run_app.command("round1")
+def run_round1(
+    topic: TopicOption,
+    limit: LimitOption = None,
+    force: ForceOption = False,
+) -> None:
+    client = LLMClient.from_topic(topic)
+    triage_result = triage.triage(topic, limit=limit, force=force, llm_client=client)
+    l3_result = summarize.summarize_L3(topic, limit=limit, force=force, llm_client=client)
+    _echo_result(_combine_results("round1", [triage_result, l3_result]))
 
 
 @run_app.command("extract")
@@ -144,6 +162,17 @@ def run_noop(topic: TopicOption) -> None:
 
 def main() -> None:
     app()
+
+
+def _combine_results(op_name: str, results: list[OpResult]) -> OpResult:
+    combined = OpResult(op_name=op_name)
+    for result in results:
+        combined.processed.extend(result.processed)
+        combined.skipped.extend(result.skipped)
+        combined.failed.extend(result.failed)
+        combined.artifacts_written.extend(result.artifacts_written)
+        combined.duration_seconds += result.duration_seconds
+    return combined
 
 
 if __name__ == "__main__":

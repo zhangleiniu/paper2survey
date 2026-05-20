@@ -1,0 +1,16 @@
+You are triaging one paper for a survey-writing system.
+
+Read only the excerpt below. Do not infer bibliographic metadata such as year, venue, or authors.
+
+Return structured output with:
+- paper_type: one of survey, method, benchmark, dataset, analysis, position, application, tool_system
+- paper_type_confidence: a number from 0 to 1
+- tldr: one concise sentence describing the paper's contribution
+- topics: 1 to 6 short topical tags
+- anchor: false unless the excerpt clearly indicates a broad survey or foundational paper
+
+Abstract:
+{{abstract}}
+
+First introduction paragraph:
+{{intro_first_para}}
