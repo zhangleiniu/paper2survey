@@ -7,6 +7,7 @@ from typing import Annotated
 import typer
 
 from survey_system.config import load_config
+from survey_system.io.anchors import curate_anchors
 from survey_system.io.bib import parse_bib_entries
 from survey_system.io.contracts import OpResult
 from survey_system.io.papers import read_papers
@@ -81,6 +82,12 @@ def topic_validate(topic: TopicOption) -> None:
         raise typer.Exit(code=1)
 
     typer.echo("OK: papers.csv, references.bib, and pdf files are consistent")
+
+
+@topic_app.command("curate-anchors")
+def topic_curate_anchors(topic: TopicOption) -> None:
+    path = curate_anchors(topic)
+    typer.echo(f"Wrote {path}")
 
 
 @run_app.command("parse-pdf")
@@ -164,6 +171,14 @@ def run_round4(
 @run_app.command("propose-anchors")
 def run_propose_anchors(topic: TopicOption) -> None:
     _echo_result(propose_anchors.propose_anchors(topic))
+
+
+@run_app.command("anchors")
+def run_anchors(
+    topic: TopicOption,
+    force: ForceOption = False,
+) -> None:
+    _echo_result(propose_anchors.propose_anchors(topic, force=force))
 
 
 @run_app.command("propose-outline")

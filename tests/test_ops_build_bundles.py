@@ -51,6 +51,19 @@ def test_build_bundles_is_idempotent(tmp_path: Path) -> None:
     ]
 
 
+def test_build_bundles_without_anchors_uses_papers_block(tmp_path: Path) -> None:
+    topic = _topic_with_bundle_inputs(tmp_path)
+    (topic / "anchors.csv").unlink()
+
+    build_bundles(topic)
+
+    text = (topic / "bundles" / "section_01_1_foundations_1_1_widget_surveys.md").read_text(
+        encoding="utf-8"
+    )
+    assert "## Anchor Papers" not in text
+    assert "## Papers" in text
+
+
 def _topic_with_bundle_inputs(tmp_path: Path) -> Path:
     topic = tmp_path / "mini_topic"
     shutil.copytree(FIXTURE, topic)

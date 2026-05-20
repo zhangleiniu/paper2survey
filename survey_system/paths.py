@@ -79,6 +79,10 @@ def anchors_csv(topic_path: Path) -> Path:
     return topic_root(topic_path) / "anchors.csv"
 
 
+def anchors_candidates_csv(topic_path: Path, version: str = "v1") -> Path:
+    return topic_root(topic_path) / f"anchors_candidates_{version}.csv"
+
+
 def runs_dir(topic_path: Path) -> Path:
     return topic_root(topic_path) / "_runs"
 

@@ -37,3 +37,11 @@
 - Section assignment accepts only primary section paths that exactly match parsed `outline.md` paths. Invalid primary paths are logged to `_review_needed.csv`.
 - Bundles are plain markdown files, one per parsed section. They contain anchor papers first, then other primary papers sorted by year, followed by cross-references for secondary assignments.
 - Bundle key fields come from the current schema's non-standard `_bundle_fields` list for each paper type, plus the universal L1 block.
+
+## Phase 6
+
+- `anchors_candidates_v1.csv` is the human review surface. It contains paper metadata, venue tier, LLM score/reason, `is_survey`, deterministic `suggested`, `your_decision`, and optional `role_notes`.
+- Venue tier is an exact match against `config.yaml:venue_tiers`; missing venues default to tier 3.
+- The deterministic suggestion rule is: suggest surveys, plus tier-1 papers with `llm_score >= 4`.
+- Curation only promotes rows where `your_decision == yes` into `anchors.csv`. `role_notes` is copied when present, otherwise the LLM reason is used.
+- Downstream anchor weighting remains file-based: if `anchors.csv` exists, outline prompts add `(ANCHOR)` tags and bundles split anchor papers before other papers.

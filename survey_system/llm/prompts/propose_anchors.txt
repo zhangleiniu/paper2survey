@@ -1,0 +1,8 @@
+Score candidate anchor papers for a survey corpus.
+
+Anchor papers should be important for understanding the field: broad surveys, foundational methods, high-quality benchmarks, datasets, analyses, or papers that organize many others.
+
+Return a score from 0 to 5 for every paper, plus a concise reason.
+
+Corpus cards:
+{{corpus_cards}}

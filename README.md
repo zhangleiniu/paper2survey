@@ -180,3 +180,26 @@ If `anchors.csv` exists, outline prompts tag those papers with `(ANCHOR)`, and
 bundles list anchor papers before other papers. Bundle entries include the
 paper's `bib_key`, full L2 narrative, and selected key L1 fields from the
 current schema's `_bundle_fields`.
+
+## Phase 6: Anchor Recommendation
+
+Round 2 recommends anchor papers for human review. It reads each included
+paper's `L3.txt`, `meta.json`, venue, year, and configured venue tier, then
+writes `anchors_candidates_v1.csv`.
+
+Generate candidates:
+
+```bash
+survey run anchors --topic tests/fixtures/mini_topic
+```
+
+Review the CSV and set `your_decision` to `yes` for selected anchors, then
+promote them:
+
+```bash
+survey topic curate-anchors --topic tests/fixtures/mini_topic
+```
+
+This writes `anchors.csv` with `bib_key` and `role_notes`. Later outline prompts
+tag those papers with `(ANCHOR)`, and bundles put anchor papers before other
+papers in each section.
