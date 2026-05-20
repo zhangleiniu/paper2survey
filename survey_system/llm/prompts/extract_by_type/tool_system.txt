@@ -1,0 +1,1 @@
+For a tool/system paper, focus type-specific fields on the system goal and user-facing workflow.

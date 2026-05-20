@@ -27,6 +27,12 @@ survey = "survey_system.cli:main"
 [tool.setuptools.packages.find]
 include = ["survey_system*"]
 
+[tool.setuptools.package-data]
+survey_system = [
+    "llm/prompts/*.txt",
+    "llm/prompts/extract_by_type/*.txt",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [

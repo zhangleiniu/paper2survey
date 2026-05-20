@@ -116,3 +116,38 @@ The live LLM smoke test is opt-in:
 ```bash
 RUN_LLM_LIVE=1 ANTHROPIC_API_KEY=... pytest tests/test_llm_client.py -m live
 ```
+
+## Phase 4: Round 4 L1 Extraction and L2 Summaries
+
+Round 4 uses the current manual schema in `schemas/current.txt` and
+`schemas/schema_v1.json` to generate:
+
+- `papers/<bib_key>/L1.json`
+- `papers/<bib_key>/L2.md`
+
+Automatic schema design is still deferred; for now, edit or replace the schema
+files by hand before running extraction.
+
+Run extraction only:
+
+```bash
+survey run extract --topic tests/fixtures/mini_topic --bib-key smith2024widgets
+survey run extract --topic tests/fixtures/mini_topic --limit 3 --force
+```
+
+Run L2 summarization only:
+
+```bash
+survey run summarize-l2 --topic tests/fixtures/mini_topic --bib-key smith2024widgets
+```
+
+Run the full Round 4 sequence:
+
+```bash
+survey run round4 --topic tests/fixtures/mini_topic --limit 3
+```
+
+Extraction requires `meta.json` from Round 1 and `L0.md` from Round 0. Each
+`L1.json` gets a top-level `_schema_version` so future schema upgrades can detect
+stale extractions. L2 summaries are intended to be 100 to 400 words; outputs
+outside that soft bound are written and flagged in `_review_needed.csv`.

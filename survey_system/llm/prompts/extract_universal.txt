@@ -1,0 +1,9 @@
+Extract structured L1 fields for one paper.
+
+Use the supplied JSON schema exactly. Do not add keys outside the schema. Do not invent bibliographic metadata.
+
+Paper type: {{paper_type}}
+Schema version: {{schema_version}}
+
+Full L0 markdown:
+{{l0_text}}

@@ -1,0 +1,6 @@
+Write a 100 to 400 word narrative L2 summary for one paper.
+
+Use the L1 fields below. Prefer concrete details from L1 and keep the summary useful as writing context for a survey section.
+
+L1 JSON:
+{{l1_json}}

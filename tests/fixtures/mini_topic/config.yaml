@@ -3,6 +3,7 @@ models:
   cheap: placeholder-cheap
   capable: placeholder-capable
   triage: placeholder-cheap
+  extract: placeholder-capable
   summarize: placeholder-cheap
 thresholds:
   triage_confidence_review_below: 0.7

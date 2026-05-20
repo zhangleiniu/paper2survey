@@ -1,0 +1,1 @@
+For an application paper, focus type-specific fields on the application domain and deployment context.

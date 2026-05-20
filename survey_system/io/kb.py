@@ -11,6 +11,7 @@ from survey_system.paths import (
     paper_artifacts_dir,
     paper_l0_path,
     paper_l1_path,
+    paper_l2_path,
     paper_l3_path,
     paper_meta_path,
 )
@@ -51,6 +52,18 @@ def write_L1(topic_path: Path, bib_key: str, l1: BaseModel | dict[str, Any]) -> 
     else:
         payload = l1
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
+def read_L1(topic_path: Path, bib_key: str) -> dict[str, Any]:
+    with paper_l1_path(topic_path, bib_key).open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def write_L2(topic_path: Path, bib_key: str, text: str) -> Path:
+    path = paper_l2_path(topic_path, bib_key)
+    paper_artifacts_dir(topic_path, bib_key).mkdir(parents=True, exist_ok=True)
+    path.write_text(text.strip() + "\n", encoding="utf-8")
     return path
 
 

@@ -21,3 +21,11 @@
 - Model tiers are resolved from `config.yaml`; operation-specific keys such as `triage` and `summarize` can override the generic `cheap` and `capable` tiers.
 - If triage returns an out-of-enum `paper_type`, the op retries once. A second invalid response writes partial `meta.json` with `paper_type = null`, confidence `0`, preserves any returned TLDR/topics, and appends `_review_needed.csv`.
 - Live LLM tests are opt-in with `RUN_LLM_LIVE=1` so normal tests stay deterministic and offline.
+
+## Phase 4
+
+- Schema design remains manual. Phase 4 reads `schemas/current.txt` and the matching `schema_vN.json`; automatic schema proposal and promotion stay deferred.
+- L1 validation uses the small JSON Schema subset used by our topic schemas: object, array, string, number, integer, boolean, required fields, enum/const, and `additionalProperties`.
+- Extraction fills `_schema_version` and `_paper_type` in code before validation, so the LLM focuses on the universal and type-specific content.
+- Extraction retries once after schema validation failure, then appends `_review_needed.csv` and leaves `L1.json` unwritten.
+- L2 summarization uses L1 only in this phase to save tokens. It writes the narrative even if it falls outside the 100-400 word soft bound, then flags the paper for review.

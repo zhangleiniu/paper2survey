@@ -51,6 +51,16 @@ class LLMClient:
         configured = getattr(self.config.models, model_tier, None)
         if configured:
             return configured
+        default_tiers = {
+            "triage": "cheap",
+            "summarize": "cheap",
+            "assign": "cheap",
+            "extract": "capable",
+            "schema_design": "capable",
+            "outline": "capable",
+        }
+        if model_tier in default_tiers:
+            return getattr(self.config.models, default_tiers[model_tier])
         if model_tier in {"cheap", "capable"}:
             return getattr(self.config.models, model_tier)
         raise KeyError(f"Unknown model tier: {model_tier}")

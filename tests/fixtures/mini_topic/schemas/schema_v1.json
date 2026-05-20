@@ -1,0 +1,102 @@
+{
+  "version": "v1",
+  "universal": {
+    "type": "object",
+    "properties": {
+      "problem": {"type": "string"},
+      "contributions": {"type": "array", "items": {"type": "string"}},
+      "datasets": {"type": "array", "items": {"type": "string"}},
+      "limitations": {"type": "array", "items": {"type": "string"}}
+    },
+    "required": ["problem", "contributions", "datasets", "limitations"],
+    "additionalProperties": false
+  },
+  "by_type": {
+    "survey": {
+      "type": "object",
+      "properties": {
+        "scope": {"type": "string"},
+        "taxonomy": {"type": "array", "items": {"type": "string"}}
+      },
+      "required": ["scope", "taxonomy"],
+      "additionalProperties": false,
+      "_bundle_fields": ["scope", "taxonomy"]
+    },
+    "method": {
+      "type": "object",
+      "properties": {
+        "method_idea": {"type": "string"},
+        "components": {"type": "array", "items": {"type": "string"}},
+        "main_results": {"type": "string"}
+      },
+      "required": ["method_idea", "components", "main_results"],
+      "additionalProperties": false,
+      "_bundle_fields": ["method_idea", "main_results"]
+    },
+    "benchmark": {
+      "type": "object",
+      "properties": {
+        "benchmark_goal": {"type": "string"},
+        "metrics": {"type": "array", "items": {"type": "string"}}
+      },
+      "required": ["benchmark_goal", "metrics"],
+      "additionalProperties": false,
+      "_bundle_fields": ["benchmark_goal", "metrics"]
+    },
+    "dataset": {
+      "type": "object",
+      "properties": {
+        "dataset_name": {"type": "string"},
+        "data_sources": {"type": "array", "items": {"type": "string"}}
+      },
+      "required": ["dataset_name", "data_sources"],
+      "additionalProperties": false,
+      "_bundle_fields": ["dataset_name", "data_sources"]
+    },
+    "analysis": {
+      "type": "object",
+      "properties": {
+        "analysis_question": {"type": "string"},
+        "findings": {"type": "array", "items": {"type": "string"}}
+      },
+      "required": ["analysis_question", "findings"],
+      "additionalProperties": false,
+      "_bundle_fields": ["analysis_question", "findings"]
+    },
+    "position": {
+      "type": "object",
+      "properties": {
+        "position": {"type": "string"},
+        "arguments": {"type": "array", "items": {"type": "string"}}
+      },
+      "required": ["position", "arguments"],
+      "additionalProperties": false,
+      "_bundle_fields": ["position", "arguments"]
+    },
+    "application": {
+      "type": "object",
+      "properties": {
+        "application_domain": {"type": "string"},
+        "deployment_context": {"type": "string"}
+      },
+      "required": ["application_domain", "deployment_context"],
+      "additionalProperties": false,
+      "_bundle_fields": ["application_domain", "deployment_context"]
+    },
+    "tool_system": {
+      "type": "object",
+      "properties": {
+        "system_goal": {"type": "string"},
+        "interface_or_workflow": {"type": "string"}
+      },
+      "required": ["system_goal", "interface_or_workflow"],
+      "additionalProperties": false,
+      "_bundle_fields": ["system_goal", "interface_or_workflow"]
+    }
+  },
+  "_provenance": {
+    "based_on_anchors": [],
+    "promoted_at": "fixture",
+    "delta_from_prev": "Initial hand-written Phase 4 fixture schema"
+  }
+}

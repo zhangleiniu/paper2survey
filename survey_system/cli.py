@@ -125,13 +125,40 @@ def run_round1(
 
 
 @run_app.command("extract")
-def run_extract(topic: TopicOption) -> None:
-    _echo_result(extract.extract_l1(topic))
+def run_extract(
+    topic: TopicOption,
+    bib_key: BibKeyOption = None,
+    limit: LimitOption = None,
+    force: ForceOption = False,
+) -> None:
+    _echo_result(extract.extract_L1(topic, bib_key=bib_key, limit=limit, force=force))
 
 
 @run_app.command("summarize")
 def run_summarize(topic: TopicOption) -> None:
     _echo_result(summarize.summarize(topic))
+
+
+@run_app.command("summarize-l2")
+def run_summarize_l2(
+    topic: TopicOption,
+    bib_key: BibKeyOption = None,
+    limit: LimitOption = None,
+    force: ForceOption = False,
+) -> None:
+    _echo_result(summarize.summarize_L2(topic, bib_key=bib_key, limit=limit, force=force))
+
+
+@run_app.command("round4")
+def run_round4(
+    topic: TopicOption,
+    limit: LimitOption = None,
+    force: ForceOption = False,
+) -> None:
+    client = LLMClient.from_topic(topic)
+    extract_result = extract.extract_L1(topic, limit=limit, force=force, llm_client=client)
+    l2_result = summarize.summarize_L2(topic, limit=limit, force=force, llm_client=client)
+    _echo_result(_combine_results("round4", [extract_result, l2_result]))
 
 
 @run_app.command("propose-anchors")
