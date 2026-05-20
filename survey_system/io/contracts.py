@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class FailureItem(BaseModel):
@@ -33,6 +33,28 @@ class PaperRow(BaseModel):
     include: Literal["yes", "no"] = "yes"
     exclusion_reason: str = ""
     user_notes: str = ""
+
+
+class Meta(BaseModel):
+    paper_type: str | None = None
+    paper_type_confidence: float | None = None
+    tldr: str = ""
+    topics: list[str] = Field(default_factory=list)
+    anchor: bool = False
+
+
+class L1Universal(BaseModel):
+    schema_version: int = Field(default=1, alias="_schema_version")
+    bib_key: str
+    fields: dict[str, Any] = Field(default_factory=dict)
+
+
+class L1ByType(RootModel[dict[str, Any]]):
+    root: dict[str, Any] = Field(default_factory=dict)
+
+
+class L2(BaseModel):
+    text: str = ""
 
 
 class ModelTierConfig(BaseModel):

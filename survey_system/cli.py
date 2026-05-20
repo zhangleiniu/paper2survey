@@ -7,7 +7,9 @@ from typing import Annotated
 import typer
 
 from survey_system.config import load_config
+from survey_system.io.bib import parse_bib_entries
 from survey_system.io.contracts import OpResult
+from survey_system.io.papers import read_papers
 from survey_system.ops import (
     assign_section,
     build_bundles,
@@ -19,6 +21,7 @@ from survey_system.ops import (
     triage,
 )
 from survey_system.status import topic_status
+from survey_system.paths import pdfs_dir
 
 app = typer.Typer(help="Survey writing system.")
 topic_app = typer.Typer(help="Create and inspect topic workspaces.")
@@ -42,6 +45,38 @@ def topic_init(topic: TopicOption) -> None:
 @topic_app.command("status")
 def topic_status_command(topic: TopicOption) -> None:
     typer.echo(json.dumps(topic_status(topic), indent=2, default=str))
+
+
+@topic_app.command("validate")
+def topic_validate(topic: TopicOption) -> None:
+    papers = read_papers(topic)
+    bib_entries = parse_bib_entries(topic)
+    issues: list[str] = []
+
+    if len(papers) != len(bib_entries):
+        issues.append(
+            f"papers.csv has {len(papers)} rows but references.bib has {len(bib_entries)} entries"
+        )
+
+    bib_keys = set(bib_entries)
+    paper_keys = {paper.bib_key for paper in papers}
+    for missing_key in sorted(paper_keys - bib_keys):
+        issues.append(f"references.bib is missing entry for {missing_key}")
+    for extra_key in sorted(bib_keys - paper_keys):
+        issues.append(f"references.bib has extra entry {extra_key}")
+
+    pdf_dir = pdfs_dir(topic)
+    for paper in papers:
+        pdf_path = pdf_dir / paper.pdf_filename
+        if not pdf_path.exists():
+            issues.append(f"missing PDF for {paper.bib_key}: {pdf_path}")
+
+    if issues:
+        for issue in issues:
+            typer.echo(f"ERROR: {issue}")
+        raise typer.Exit(code=1)
+
+    typer.echo("OK: papers.csv, references.bib, and pdf files are consistent")
 
 
 @run_app.command("parse-pdf")
