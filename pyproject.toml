@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "survey-system"
@@ -24,13 +24,16 @@ marker = [
 [project.scripts]
 survey = "survey_system.cli:main"
 
-[tool.setuptools.packages.find]
-include = ["survey_system*"]
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
 
-[tool.setuptools.package-data]
-survey_system = [
-    "llm/prompts/*.txt",
-    "llm/prompts/extract_by_type/*.txt",
+[tool.hatch.build.targets.wheel]
+packages = ["survey_system"]
+artifacts = [
+    "survey_system/llm/prompts/*.txt",
+    "survey_system/llm/prompts/extract_by_type/*.txt",
 ]
 
 [tool.pytest.ini_options]

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip list *)",
+      "Bash(uv --version)",
+      "Bash(uv sync *)",
+      "Bash(grep -n \"pip install\\\\|^survey \\\\|^\\\\`\\\\`\\\\`bash\" /home/lei/work/paper2survey/README.md)"
+    ]
+  }
+}
