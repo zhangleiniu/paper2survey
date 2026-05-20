@@ -30,6 +30,9 @@ app.add_typer(topic_app, name="topic")
 app.add_typer(run_app, name="run")
 
 TopicOption = Annotated[Path, typer.Option("--topic", "-t", exists=False, file_okay=False)]
+BibKeyOption = Annotated[str | None, typer.Option("--bib-key", "-k")]
+LimitOption = Annotated[int | None, typer.Option("--limit", min=1)]
+ForceOption = Annotated[bool, typer.Option("--force")]
 
 
 def _echo_result(result: OpResult) -> None:
@@ -80,8 +83,22 @@ def topic_validate(topic: TopicOption) -> None:
 
 
 @run_app.command("parse-pdf")
-def run_parse_pdf(topic: TopicOption) -> None:
-    _echo_result(parse_pdf.parse_pdf(topic))
+def run_parse_pdf(
+    topic: TopicOption,
+    bib_key: BibKeyOption = None,
+    limit: LimitOption = None,
+    force: ForceOption = False,
+) -> None:
+    _echo_result(parse_pdf.parse_pdf(topic, bib_key=bib_key, limit=limit, force=force))
+
+
+@run_app.command("round0")
+def run_round0(
+    topic: TopicOption,
+    limit: LimitOption = None,
+    force: ForceOption = False,
+) -> None:
+    _echo_result(parse_pdf.parse_pdf(topic, limit=limit, force=force))
 
 
 @run_app.command("triage")

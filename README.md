@@ -36,3 +36,50 @@ survey topic validate --topic tests/fixtures/mini_topic
 
 The validator checks that `papers.csv` and `references.bib` have matching row
 counts and keys, and that every listed PDF exists under `pdfs/`.
+
+## Phase 2: Round 0 PDF Parsing
+
+Round 0 converts included papers from `pdfs/<pdf_filename>` into
+`papers/<bib_key>/L0.md` with Marker. Extracted images are written under
+`papers/<bib_key>/_images/`.
+
+Marker is optional because it downloads and loads large local models. A normal
+development install can run IO tests without it:
+
+```bash
+pip install -e .
+```
+
+Install Marker support when you are ready to parse PDFs:
+
+```bash
+pip install -e ".[marker]"
+```
+
+Marker may require several GB of VRAM, depending on model configuration and PDF
+content. The backend lazy-loads models on the first conversion and reuses the
+same backend instance across the run.
+
+Parse all included papers:
+
+```bash
+survey run round0 --topic tests/fixtures/mini_topic
+```
+
+Useful development variants:
+
+```bash
+survey run parse-pdf --topic tests/fixtures/mini_topic --bib-key smith2024widgets
+survey run round0 --topic tests/fixtures/mini_topic --limit 1
+survey run round0 --topic tests/fixtures/mini_topic --force
+```
+
+Existing non-empty `L0.md` files are skipped unless `--force` is passed. Missing
+PDFs, repeated Marker failures, and very short L0 outputs are recorded in
+`_review_needed.csv`.
+
+The model-backed Marker fixture test is opt-in to keep normal test runs light:
+
+```bash
+RUN_MARKER_LIVE=1 pytest tests/test_pdf_marker_backend.py
+```

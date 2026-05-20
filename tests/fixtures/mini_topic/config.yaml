@@ -6,6 +6,7 @@ marker:
   force_ocr: false
   use_llm: false
   torch_device: cpu
+  parse_pdf_min_chars: 10
 venue_tiers:
   FakeConf: 1
   DemoSymposium: 2

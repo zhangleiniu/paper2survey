@@ -10,8 +10,13 @@ from survey_system.io.kb import read_L0, read_meta, write_L1, write_meta
 FIXTURE = Path("tests/fixtures/mini_topic")
 
 
-def test_read_l0() -> None:
-    text = read_L0(FIXTURE, "smith2024widgets")
+def test_read_l0(tmp_path: Path) -> None:
+    topic = tmp_path / "topic"
+    l0_path = topic / "papers" / "smith2024widgets" / "L0.md"
+    l0_path.parent.mkdir(parents=True)
+    l0_path.write_text("# Widget Survey\n\nThis surveys widget methods.", encoding="utf-8")
+
+    text = read_L0(topic, "smith2024widgets")
 
     assert "surveys widget methods" in text
 

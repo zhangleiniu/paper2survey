@@ -66,6 +66,7 @@ class MarkerConfig(BaseModel):
     force_ocr: bool = False
     use_llm: bool = False
     torch_device: str = "auto"
+    parse_pdf_min_chars: int = 1000
 
 
 class TopicConfig(BaseModel):
