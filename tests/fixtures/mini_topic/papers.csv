@@ -1,0 +1,4 @@
+bib_key,title,year,venue,pdf_filename,include,exclusion_reason,user_notes
+smith2024widgets,Widget Survey,2024,FakeConf,smith2024widgets.pdf,yes,,Anchor-style overview
+lee2023gadgets,Gadget Benchmarks,2023,DemoSymposium,lee2023gadgets.pdf,yes,,Benchmark paper
+patel2022systems,Systems for Thingamabobs,2022,Workshop on Examples,patel2022systems.pdf,yes,,Tool paper

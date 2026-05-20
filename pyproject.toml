@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "survey-system"
+version = "0.1.0"
+description = "A file-backed survey writing system for iterative paper synthesis."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2",
+    "typer",
+    "pyyaml",
+    "python-frontmatter",
+]
+
+[project.optional-dependencies]
+marker = [
+    "marker-pdf",
+]
+
+[project.scripts]
+survey = "survey_system.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["survey_system*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

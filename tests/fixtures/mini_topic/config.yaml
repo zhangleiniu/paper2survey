@@ -1,0 +1,11 @@
+topic_name: mini_topic
+models:
+  cheap: placeholder-cheap
+  capable: placeholder-capable
+marker:
+  force_ocr: false
+  use_llm: false
+  torch_device: cpu
+venue_tiers:
+  FakeConf: 1
+  DemoSymposium: 2
