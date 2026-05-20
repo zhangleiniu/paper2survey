@@ -26,7 +26,9 @@ def summarize(
     *,
     force: bool = False,
     dry_run: bool = False,
+    workers: int = 1,
 ) -> OpResult:
+    _ = workers
     return summarize_L3(topic_path, bib_key=bib_key, force=force, dry_run=dry_run)
 
 
@@ -38,7 +40,9 @@ def summarize_L2(
     dry_run: bool = False,
     limit: int | None = None,
     llm_client: LLMClient | None = None,
+    workers: int = 1,
 ) -> OpResult:
+    _ = workers
     started = time.monotonic()
     client = llm_client or LLMClient.from_topic(topic_path)
     papers = _select_papers(topic_path, bib_key, limit)
@@ -111,7 +115,9 @@ def summarize_L3(
     dry_run: bool = False,
     limit: int | None = None,
     llm_client: LLMClient | None = None,
+    workers: int = 1,
 ) -> OpResult:
+    _ = workers
     started = time.monotonic()
     client = llm_client or LLMClient.from_topic(topic_path)
     papers = _select_papers(topic_path, bib_key, limit)

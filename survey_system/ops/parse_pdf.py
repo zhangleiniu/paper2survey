@@ -18,6 +18,7 @@ from survey_system.paths import (
     runs_dir,
 )
 from survey_system.pdf.marker_backend import MarkerBackend
+from survey_system.pdf.pymupdf_backend import PyMuPDFBackend
 
 
 def parse_pdf(
@@ -37,11 +38,14 @@ def parse_pdf(
     result.artifacts_written.append(log_path)
 
     if backend is None and papers:
-        backend = MarkerBackend(
-            torch_device=config.marker.torch_device,
-            force_ocr=config.marker.force_ocr,
-            use_llm=config.marker.use_llm,
-        )
+        if config.marker.backend == "pymupdf":
+            backend = PyMuPDFBackend()
+        else:
+            backend = MarkerBackend(
+                torch_device=config.marker.torch_device,
+                force_ocr=config.marker.force_ocr,
+                use_llm=config.marker.use_llm,
+            )
 
     for paper in papers:
         l0_path = paper_l0_path(topic_path, paper.bib_key)

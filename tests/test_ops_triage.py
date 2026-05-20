@@ -26,9 +26,9 @@ class FakeLLMClient:
         self.calls += 1
         if self.responses:
             return self.responses.pop(0)
-        if "benchmark" in prompt.lower():
+        if "a benchmark for gadget" in prompt.lower():
             paper_type = "benchmark"
-        elif "tool system" in prompt.lower():
+        elif "a tool system for thingamabob" in prompt.lower():
             paper_type = "tool_system"
         else:
             paper_type = "survey"
@@ -61,6 +61,15 @@ def test_triage_is_idempotent(tmp_path: Path) -> None:
 
     assert second.processed == []
     assert second.skipped == ["smith2024widgets", "lee2023gadgets", "patel2022systems"]
+
+
+def test_triage_workers_parameter_preserves_outputs(tmp_path: Path) -> None:
+    topic = _topic_with_l0(tmp_path)
+
+    result = triage(topic, llm_client=FakeLLMClient(), workers=2)
+
+    assert result.processed == ["smith2024widgets", "lee2023gadgets", "patel2022systems"]
+    assert read_meta(topic, "smith2024widgets").paper_type == "survey"
 
 
 def test_triage_out_of_enum_writes_partial_meta_and_review(tmp_path: Path) -> None:

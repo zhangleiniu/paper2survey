@@ -29,7 +29,9 @@ def extract_L1(
     dry_run: bool = False,
     limit: int | None = None,
     llm_client: LLMClient | None = None,
+    workers: int = 1,
 ) -> OpResult:
+    _ = workers
     started = time.monotonic()
     client = llm_client or LLMClient.from_topic(topic_path)
     topic_schema = load_current_schema(topic_path)

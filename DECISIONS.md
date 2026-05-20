@@ -53,3 +53,12 @@
 - Candidate schemas must include all eight paper types. Missing type-specific schemas are filled from the prior schema before validation.
 - Provenance records anchor keys, generation time, promotion time, and a simple field-level diff from the prior schema.
 - Promoting a schema updates `schemas/current.txt` but does not automatically run extraction. The user reruns `survey run round4 --force` when ready.
+
+## Phase 8
+
+- CLI run commands write one JSONL summary file per invocation in `_runs/`. Existing op-specific internal logs may still exist, but status reads the shared summary format when available.
+- `topic_status(..., detailed=True)` is file-derived: it counts artifacts, review rows, and recent run logs without hidden process state.
+- Review queue handling remains transparent and file-based through `_review_needed.csv`; detailed status prints those rows instead of mutating them.
+- `--workers` is available on LLM/script per-paper ops to stabilize the CLI contract. The current implementation preserves idempotency and deterministic tests; parse PDF remains sequential because model memory is the bottleneck.
+- LLM provider selection is driven by `models.provider`. Anthropic remains default; OpenAI is the second backend and uses JSON-object structured responses.
+- The optional PyMuPDF PDF backend conforms to the same `convert(...) -> ParsedPdf` contract as Marker and is selected with `marker.backend: pymupdf`.

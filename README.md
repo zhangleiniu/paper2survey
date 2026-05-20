@@ -228,3 +228,45 @@ Promotion updates `schemas/current.txt` and stamps the promoted schema's
 ```bash
 survey run round4 --topic tests/fixtures/mini_topic --force
 ```
+
+## Phase 8: Polish, Logging, Status, Providers
+
+Every `survey run ...` command writes a JSONL run log under `_runs/` with start
+and end time, processed/skipped/failed papers, artifacts, cost placeholder, and
+notes:
+
+```bash
+survey run triage --topic tests/fixtures/mini_topic --workers 4
+ls tests/fixtures/mini_topic/_runs/
+```
+
+Inspect topic progress and the review queue:
+
+```bash
+survey topic status --topic tests/fixtures/mini_topic
+survey topic status --topic tests/fixtures/mini_topic --detailed
+```
+
+LLM-backed per-paper commands accept `--workers N` for the stable CLI surface:
+
+```bash
+survey run extract --topic tests/fixtures/mini_topic --workers 4
+survey run assign-section --topic tests/fixtures/mini_topic --workers 4
+```
+
+Provider selection is configured in `config.yaml`:
+
+```yaml
+models:
+  provider: anthropic  # or openai
+  cheap: claude-...
+  capable: claude-...
+```
+
+PDF parsing defaults to Marker. A lightweight PyMuPDF-compatible backend can be
+selected when installed:
+
+```yaml
+marker:
+  backend: pymupdf
+```

@@ -6,6 +6,7 @@ from typing import Any
 from survey_system.config import load_config
 from survey_system.io.contracts import TopicConfig
 from survey_system.llm.anthropic import AnthropicBackend
+from survey_system.llm.openai import OpenAIBackend
 
 
 class StructuredBackend:
@@ -26,7 +27,7 @@ class LLMClient:
         backend: StructuredBackend | None = None,
     ) -> None:
         self.config = config
-        self.backend = backend or AnthropicBackend()
+        self.backend = backend or self._backend_for_provider(config.models.provider)
 
     @classmethod
     def from_topic(cls, topic_path: Path, backend: StructuredBackend | None = None) -> "LLMClient":
@@ -64,3 +65,10 @@ class LLMClient:
         if model_tier in {"cheap", "capable"}:
             return getattr(self.config.models, model_tier)
         raise KeyError(f"Unknown model tier: {model_tier}")
+
+    def _backend_for_provider(self, provider: str) -> StructuredBackend:
+        if provider == "anthropic":
+            return AnthropicBackend()
+        if provider == "openai":
+            return OpenAIBackend()
+        raise ValueError(f"Unknown LLM provider: {provider}")

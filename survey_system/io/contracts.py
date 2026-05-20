@@ -88,6 +88,7 @@ class ModelTierConfig(BaseModel):
     schema_design: str | None = None
     outline: str | None = None
     assign: str | None = None
+    provider: str = "anthropic"
 
 
 class ThresholdConfig(BaseModel):
@@ -96,6 +97,7 @@ class ThresholdConfig(BaseModel):
 
 
 class MarkerConfig(BaseModel):
+    backend: str = "marker"
     force_ocr: bool = False
     use_llm: bool = False
     torch_device: str = "auto"

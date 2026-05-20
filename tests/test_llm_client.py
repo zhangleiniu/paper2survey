@@ -9,6 +9,7 @@ from survey_system.config import load_config
 from survey_system.io.contracts import Meta
 from survey_system.llm.anthropic import AnthropicBackend
 from survey_system.llm.client import LLMClient
+from survey_system.llm.openai import OpenAIBackend
 
 
 class RecordingBackend:
@@ -26,6 +27,15 @@ def test_llm_client_maps_model_tier_from_config() -> None:
 
     assert client.complete_structured("prompt", {}, "triage") == {"ok": True}
     assert backend.model_id == "placeholder-cheap"
+
+
+def test_llm_client_uses_configured_provider() -> None:
+    config = load_config(__import__("pathlib").Path("tests/fixtures/mini_topic"))
+    config.models.provider = "openai"
+
+    client = LLMClient(config)
+
+    assert client.backend.__class__.__name__ == "OpenAIBackend"
 
 
 def test_anthropic_backend_returns_forced_tool_input() -> None:
@@ -51,6 +61,27 @@ def test_anthropic_backend_returns_forced_tool_input() -> None:
         Meta.model_json_schema(),
         "fake-model",
     )
+
+    assert Meta.model_validate(result).paper_type == "survey"
+
+
+def test_openai_backend_parses_json_object_response() -> None:
+    fake_response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(
+                    content='{"paper_type":"survey","paper_type_confidence":0.8,"tldr":"ok","topics":[],"anchor":false}'
+                )
+            )
+        ]
+    )
+    fake_client = SimpleNamespace(
+        chat=SimpleNamespace(
+            completions=SimpleNamespace(create=lambda **kwargs: fake_response)
+        )
+    )
+
+    result = OpenAIBackend(fake_client).complete_structured("prompt", {}, "fake-model")
 
     assert Meta.model_validate(result).paper_type == "survey"
 

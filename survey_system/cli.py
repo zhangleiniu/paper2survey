@@ -11,6 +11,7 @@ from survey_system.io.anchors import curate_anchors
 from survey_system.io.bib import parse_bib_entries
 from survey_system.io.contracts import OpResult
 from survey_system.io.papers import read_papers
+from survey_system.io.runlog import write_run_log
 from survey_system.llm.client import LLMClient
 from survey_system.ops import (
     assign_section,
@@ -37,10 +38,16 @@ BibKeyOption = Annotated[str | None, typer.Option("--bib-key", "-k")]
 LimitOption = Annotated[int | None, typer.Option("--limit", min=1)]
 ForceOption = Annotated[bool, typer.Option("--force")]
 VersionOption = Annotated[str, typer.Option("--version")]
+WorkersOption = Annotated[int, typer.Option("--workers", min=1)]
 
 
 def _echo_result(result: OpResult) -> None:
     typer.echo(json.dumps(result.model_dump(mode="json"), indent=2))
+
+
+def _echo_logged(topic: Path, result: OpResult) -> None:
+    write_run_log(topic, result)
+    _echo_result(result)
 
 
 @topic_app.command("init")
@@ -50,8 +57,23 @@ def topic_init(topic: TopicOption) -> None:
 
 
 @topic_app.command("status")
-def topic_status_command(topic: TopicOption) -> None:
-    typer.echo(json.dumps(topic_status(topic), indent=2, default=str))
+def topic_status_command(
+    topic: TopicOption,
+    detailed: Annotated[bool, typer.Option("--detailed")] = False,
+) -> None:
+    status = topic_status(topic, detailed=detailed)
+    if detailed:
+        typer.echo(f"Topic: {status['topic_name']}")
+        typer.echo(f"Included papers: {status['included_papers']}")
+        typer.echo(f"Review items: {status['review_queue_items']}")
+        typer.echo("Rounds:")
+        for name, info in status["rounds"].items():
+            typer.echo(f"  {name}: {info}")
+        typer.echo("Recent runs:")
+        for run in status["recent_runs"]:
+            typer.echo(f"  {run.get('op_name')}: {run.get('end_time', '')}")
+    else:
+        typer.echo(json.dumps(status, indent=2, default=str))
 
 
 @topic_app.command("validate")
@@ -105,7 +127,7 @@ def run_parse_pdf(
     limit: LimitOption = None,
     force: ForceOption = False,
 ) -> None:
-    _echo_result(parse_pdf.parse_pdf(topic, bib_key=bib_key, limit=limit, force=force))
+    _echo_logged(topic, parse_pdf.parse_pdf(topic, bib_key=bib_key, limit=limit, force=force))
 
 
 @run_app.command("round0")
@@ -114,7 +136,7 @@ def run_round0(
     limit: LimitOption = None,
     force: ForceOption = False,
 ) -> None:
-    _echo_result(parse_pdf.parse_pdf(topic, limit=limit, force=force))
+    _echo_logged(topic, parse_pdf.parse_pdf(topic, limit=limit, force=force))
 
 
 @run_app.command("triage")
@@ -123,8 +145,9 @@ def run_triage(
     bib_key: BibKeyOption = None,
     limit: LimitOption = None,
     force: ForceOption = False,
+    workers: WorkersOption = 1,
 ) -> None:
-    _echo_result(triage.triage(topic, bib_key=bib_key, limit=limit, force=force))
+    _echo_logged(topic, triage.triage(topic, bib_key=bib_key, limit=limit, force=force, workers=workers))
 
 
 @run_app.command("round1")
@@ -132,11 +155,12 @@ def run_round1(
     topic: TopicOption,
     limit: LimitOption = None,
     force: ForceOption = False,
+    workers: WorkersOption = 1,
 ) -> None:
     client = LLMClient.from_topic(topic)
-    triage_result = triage.triage(topic, limit=limit, force=force, llm_client=client)
-    l3_result = summarize.summarize_L3(topic, limit=limit, force=force, llm_client=client)
-    _echo_result(_combine_results("round1", [triage_result, l3_result]))
+    triage_result = triage.triage(topic, limit=limit, force=force, llm_client=client, workers=workers)
+    l3_result = summarize.summarize_L3(topic, limit=limit, force=force, llm_client=client, workers=workers)
+    _echo_logged(topic, _combine_results("round1", [triage_result, l3_result]))
 
 
 @run_app.command("extract")
@@ -145,13 +169,14 @@ def run_extract(
     bib_key: BibKeyOption = None,
     limit: LimitOption = None,
     force: ForceOption = False,
+    workers: WorkersOption = 1,
 ) -> None:
-    _echo_result(extract.extract_L1(topic, bib_key=bib_key, limit=limit, force=force))
+    _echo_logged(topic, extract.extract_L1(topic, bib_key=bib_key, limit=limit, force=force, workers=workers))
 
 
 @run_app.command("summarize")
 def run_summarize(topic: TopicOption) -> None:
-    _echo_result(summarize.summarize(topic))
+    _echo_logged(topic, summarize.summarize(topic))
 
 
 @run_app.command("summarize-l2")
@@ -160,8 +185,9 @@ def run_summarize_l2(
     bib_key: BibKeyOption = None,
     limit: LimitOption = None,
     force: ForceOption = False,
+    workers: WorkersOption = 1,
 ) -> None:
-    _echo_result(summarize.summarize_L2(topic, bib_key=bib_key, limit=limit, force=force))
+    _echo_logged(topic, summarize.summarize_L2(topic, bib_key=bib_key, limit=limit, force=force, workers=workers))
 
 
 @run_app.command("round4")
@@ -169,16 +195,17 @@ def run_round4(
     topic: TopicOption,
     limit: LimitOption = None,
     force: ForceOption = False,
+    workers: WorkersOption = 1,
 ) -> None:
     client = LLMClient.from_topic(topic)
-    extract_result = extract.extract_L1(topic, limit=limit, force=force, llm_client=client)
-    l2_result = summarize.summarize_L2(topic, limit=limit, force=force, llm_client=client)
-    _echo_result(_combine_results("round4", [extract_result, l2_result]))
+    extract_result = extract.extract_L1(topic, limit=limit, force=force, llm_client=client, workers=workers)
+    l2_result = summarize.summarize_L2(topic, limit=limit, force=force, llm_client=client, workers=workers)
+    _echo_logged(topic, _combine_results("round4", [extract_result, l2_result]))
 
 
 @run_app.command("propose-anchors")
 def run_propose_anchors(topic: TopicOption) -> None:
-    _echo_result(propose_anchors.propose_anchors(topic))
+    _echo_logged(topic, propose_anchors.propose_anchors(topic))
 
 
 @run_app.command("anchors")
@@ -186,7 +213,7 @@ def run_anchors(
     topic: TopicOption,
     force: ForceOption = False,
 ) -> None:
-    _echo_result(propose_anchors.propose_anchors(topic, force=force))
+    _echo_logged(topic, propose_anchors.propose_anchors(topic, force=force))
 
 
 @run_app.command("schema-design")
@@ -194,7 +221,7 @@ def run_schema_design(
     topic: TopicOption,
     force: ForceOption = False,
 ) -> None:
-    _echo_result(design_schema.design_schema(topic, force=force))
+    _echo_logged(topic, design_schema.design_schema(topic, force=force))
 
 
 @run_app.command("propose-outline")
@@ -202,7 +229,7 @@ def run_propose_outline(
     topic: TopicOption,
     force: ForceOption = False,
 ) -> None:
-    _echo_result(propose_outline.propose_outline(topic, force=force))
+    _echo_logged(topic, propose_outline.propose_outline(topic, force=force))
 
 
 @run_app.command("round5")
@@ -210,7 +237,7 @@ def run_round5(
     topic: TopicOption,
     force: ForceOption = False,
 ) -> None:
-    _echo_result(propose_outline.propose_outline(topic, force=force))
+    _echo_logged(topic, propose_outline.propose_outline(topic, force=force))
 
 
 @run_app.command("assign-section")
@@ -219,8 +246,9 @@ def run_assign_section(
     bib_key: BibKeyOption = None,
     limit: LimitOption = None,
     force: ForceOption = False,
+    workers: WorkersOption = 1,
 ) -> None:
-    _echo_result(assign_section.assign_section(topic, bib_key=bib_key, limit=limit, force=force))
+    _echo_logged(topic, assign_section.assign_section(topic, bib_key=bib_key, limit=limit, force=force, workers=workers))
 
 
 @run_app.command("build-bundles")
@@ -228,7 +256,7 @@ def run_build_bundles(
     topic: TopicOption,
     force: ForceOption = False,
 ) -> None:
-    _echo_result(build_bundles.build_bundles(topic, force=force))
+    _echo_logged(topic, build_bundles.build_bundles(topic, force=force))
 
 
 @run_app.command("round6")
@@ -236,6 +264,7 @@ def run_round6(
     topic: TopicOption,
     limit: LimitOption = None,
     force: ForceOption = False,
+    workers: WorkersOption = 1,
 ) -> None:
     client = LLMClient.from_topic(topic)
     assign_result = assign_section.assign_section(
@@ -243,15 +272,16 @@ def run_round6(
         limit=limit,
         force=force,
         llm_client=client,
+        workers=workers,
     )
     bundle_result = build_bundles.build_bundles(topic, force=force)
-    _echo_result(_combine_results("round6", [assign_result, bundle_result]))
+    _echo_logged(topic, _combine_results("round6", [assign_result, bundle_result]))
 
 
 @run_app.command("noop")
 def run_noop(topic: TopicOption) -> None:
     load_config(topic)
-    _echo_result(OpResult.empty("noop"))
+    _echo_logged(topic, OpResult.empty("noop"))
 
 
 def main() -> None:

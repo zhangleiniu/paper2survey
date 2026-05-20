@@ -23,7 +23,9 @@ def assign_section(
     dry_run: bool = False,
     limit: int | None = None,
     llm_client: LLMClient | None = None,
+    workers: int = 1,
 ) -> OpResult:
+    _ = workers
     started = time.monotonic()
     result = OpResult(op_name="assign_section")
     assignment_path = section_assignments_path(topic_path, "v1")

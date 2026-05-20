@@ -23,7 +23,9 @@ def triage(
     dry_run: bool = False,
     limit: int | None = None,
     llm_client: LLMClient | None = None,
+    workers: int = 1,
 ) -> OpResult:
+    _ = workers
     started = time.monotonic()
     config = load_config(topic_path)
     client = llm_client or LLMClient.from_topic(topic_path)
