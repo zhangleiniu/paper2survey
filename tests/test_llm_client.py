@@ -10,6 +10,7 @@ from survey_system.io.contracts import Meta
 from survey_system.llm.anthropic import AnthropicBackend
 from survey_system.llm.client import LLMClient
 from survey_system.llm.openai import OpenAIBackend
+from survey_system.llm.vertexai import VertexAIBackend
 
 
 class RecordingBackend:
@@ -36,6 +37,15 @@ def test_llm_client_uses_configured_provider() -> None:
     client = LLMClient(config)
 
     assert client.backend.__class__.__name__ == "OpenAIBackend"
+
+
+def test_llm_client_uses_vertexai_provider() -> None:
+    config = load_config(__import__("pathlib").Path("tests/fixtures/mini_topic"))
+    config.models.provider = "vertexai"
+
+    client = LLMClient(config)
+
+    assert client.backend.__class__.__name__ == "VertexAIBackend"
 
 
 def test_anthropic_backend_returns_forced_tool_input() -> None:
@@ -84,6 +94,35 @@ def test_openai_backend_parses_json_object_response() -> None:
     result = OpenAIBackend(fake_client).complete_structured("prompt", {}, "fake-model")
 
     assert Meta.model_validate(result).paper_type == "survey"
+
+
+def test_vertexai_backend_parses_json_response() -> None:
+    calls = {}
+    fake_response = SimpleNamespace(
+        text='{"paper_type":"survey","paper_type_confidence":0.8,"tldr":"ok","topics":[],"anchor":false}'
+    )
+
+    def generate_content(**kwargs):
+        calls.update(kwargs)
+        return fake_response
+
+    fake_client = SimpleNamespace(
+        models=SimpleNamespace(generate_content=generate_content)
+    )
+
+    result = VertexAIBackend(fake_client).complete_structured(
+        "prompt",
+        Meta.model_json_schema(),
+        "gemini-test",
+        max_tokens=512,
+    )
+
+    assert Meta.model_validate(result).paper_type == "survey"
+    assert calls["model"] == "gemini-test"
+    assert calls["contents"] == "prompt"
+    assert calls["config"]["response_mime_type"] == "application/json"
+    assert calls["config"]["response_json_schema"] == Meta.model_json_schema()
+    assert calls["config"]["max_output_tokens"] == 512
 
 
 @pytest.mark.live

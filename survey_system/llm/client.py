@@ -7,6 +7,7 @@ from survey_system.config import load_config
 from survey_system.io.contracts import TopicConfig
 from survey_system.llm.anthropic import AnthropicBackend
 from survey_system.llm.openai import OpenAIBackend
+from survey_system.llm.vertexai import VertexAIBackend
 
 
 class StructuredBackend:
@@ -71,4 +72,6 @@ class LLMClient:
             return AnthropicBackend()
         if provider == "openai":
             return OpenAIBackend()
+        if provider in {"vertexai", "vertex", "google_vertex"}:
+            return VertexAIBackend()
         raise ValueError(f"Unknown LLM provider: {provider}")

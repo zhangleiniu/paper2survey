@@ -60,5 +60,5 @@
 - `topic_status(..., detailed=True)` is file-derived: it counts artifacts, review rows, and recent run logs without hidden process state.
 - Review queue handling remains transparent and file-based through `_review_needed.csv`; detailed status prints those rows instead of mutating them.
 - `--workers` is available on LLM/script per-paper ops to stabilize the CLI contract. The current implementation preserves idempotency and deterministic tests; parse PDF remains sequential because model memory is the bottleneck.
-- LLM provider selection is driven by `models.provider`. Anthropic remains default; OpenAI is the second backend and uses JSON-object structured responses.
+- LLM provider selection is driven by `models.provider`. Anthropic remains default; OpenAI uses JSON-object structured responses; Vertex AI uses the Google Gen AI SDK with Application Default Credentials and JSON schema responses.
 - The optional PyMuPDF PDF backend conforms to the same `convert(...) -> ParsedPdf` contract as Marker and is selected with `marker.backend: pymupdf`.

@@ -94,7 +94,7 @@ venue_tiers:
   AAAI: 2
   arXiv: 3
 
-# LLM model IDs. Provider is anthropic (default) or openai.
+# LLM model IDs. Provider is anthropic (default), openai, or vertexai.
 models:
   provider: anthropic
   cheap: claude-haiku-4-5-20251001
@@ -150,7 +150,25 @@ Round 6  Assign papers to sections, build writing bundles
 Round 7  Write each section (manual, in a chat interface)
 ```
 
-The `ANTHROPIC_API_KEY` environment variable must be set for Rounds 1–6. For OpenAI, set `OPENAI_API_KEY` and `models.provider: openai` in `config.yaml`.
+For Anthropic, set `ANTHROPIC_API_KEY` for Rounds 1–6. For OpenAI, set `OPENAI_API_KEY` and `models.provider: openai` in `config.yaml`.
+
+For Vertex AI, authenticate with Application Default Credentials and set the Google Cloud project/location before running LLM-backed rounds:
+
+```bash
+gcloud auth application-default login
+export GOOGLE_CLOUD_PROJECT=my-project-id
+export GOOGLE_CLOUD_LOCATION=us-central1
+export GOOGLE_GENAI_USE_VERTEXAI=True
+```
+
+Then use Vertex AI Gemini model IDs in `config.yaml`:
+
+```yaml
+models:
+  provider: vertexai
+  cheap: gemini-2.5-flash
+  capable: gemini-2.5-pro
+```
 
 ---
 
