@@ -37,3 +37,11 @@ def test_topic_inspect_schema_reports_fields() -> None:
     assert "Schema: v1" in result.output
     assert "Valid: true" in result.output
     assert "problem" in result.output
+
+
+def test_topic_inspect_outline_reports_sections() -> None:
+    result = runner.invoke(app, ["topic", "inspect-outline", "--topic", str(FIXTURE)])
+
+    assert result.exit_code == 0
+    assert "Valid: true" in result.output
+    assert "1. Foundations / 1.1 Widget Surveys" in result.output

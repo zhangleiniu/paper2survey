@@ -19,6 +19,55 @@ def parse_outline(topic_path: Path) -> list[OutlineSection]:
     return parse_outline_text(outline_path(topic_path).read_text(encoding="utf-8"))
 
 
+def inspect_outline(topic_path: Path) -> dict[str, object]:
+    path = outline_path(topic_path)
+    if not path.exists():
+        return {
+            "valid": False,
+            "issues": [f"missing outline: {path}"],
+            "warnings": [],
+            "section_count": 0,
+            "sections": [],
+            "candidate_headings": [],
+        }
+    return inspect_outline_text(path.read_text(encoding="utf-8"))
+
+
+def inspect_outline_text(markdown: str) -> dict[str, object]:
+    sections = parse_outline_text(markdown)
+    issues: list[str] = []
+    warnings: list[str] = []
+    candidate_headings = [
+        line.strip()
+        for line in markdown.splitlines()
+        if re.match(r"^#\s+Candidate\b", line.strip(), flags=re.IGNORECASE)
+    ]
+    if candidate_headings:
+        issues.append(
+            "outline.md still contains candidate headings; keep only one final outline"
+        )
+    if len(candidate_headings) > 1:
+        issues.append(f"outline.md appears to contain {len(candidate_headings)} candidates")
+    if not sections:
+        issues.append("outline.md has no parsed H2/H3 sections")
+    if re.search(r"^##\s+Trade-offs\s*$", markdown, flags=re.IGNORECASE | re.MULTILINE):
+        warnings.append("outline.md still contains a Trade-offs section from proposal output")
+
+    paths = [section.path for section in sections]
+    duplicate_paths = sorted({path for path in paths if paths.count(path) > 1})
+    if duplicate_paths:
+        issues.append(f"outline.md has duplicate section paths: {duplicate_paths}")
+
+    return {
+        "valid": not issues,
+        "issues": issues,
+        "warnings": warnings,
+        "section_count": len(sections),
+        "sections": paths,
+        "candidate_headings": candidate_headings,
+    }
+
+
 def parse_outline_text(markdown: str) -> list[OutlineSection]:
     sections: list[OutlineSection] = []
     current_h2: str | None = None

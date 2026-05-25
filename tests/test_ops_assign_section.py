@@ -4,6 +4,9 @@ import csv
 import shutil
 from pathlib import Path
 
+from typer.testing import CliRunner
+
+from survey_system.cli import app
 from survey_system.io.contracts import Meta
 from survey_system.io.kb import write_L2, write_meta
 from survey_system.ops.assign_section import assign_section
@@ -66,6 +69,20 @@ def test_assign_section_is_idempotent(tmp_path: Path) -> None:
 
     assert second.processed == []
     assert second.skipped == ["smith2024widgets", "lee2023gadgets", "patel2022systems"]
+
+
+def test_round6_rejects_candidate_outline(tmp_path: Path) -> None:
+    topic = _topic_with_l2(tmp_path)
+    (topic / "outline.md").write_text(
+        "# Candidate 1: A\n\n## Foundations\n\n### Core Ideas\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["run", "round6", "--topic", str(topic)])
+
+    assert result.exit_code == 1
+    assert "outline.md is not ready for round6" in result.output
+    assert "candidate headings" in result.output
 
 
 def _topic_with_l2(tmp_path: Path) -> Path:

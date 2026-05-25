@@ -10,6 +10,7 @@ from survey_system.config import load_config
 from survey_system.io.anchors import curate_anchors
 from survey_system.io.bib import parse_bib_entries
 from survey_system.io.contracts import OpResult
+from survey_system.io.outline import inspect_outline
 from survey_system.io.papers import read_papers
 from survey_system.io.runlog import write_run_log
 from survey_system.io.schemas import current_schema_version, inspect_schema_payload, load_schema_payload
@@ -165,6 +166,28 @@ def topic_inspect_schema(
         fields = ", ".join(info["fields"])
         bundle = ", ".join(info["bundle_fields"])
         typer.echo(f"  - {paper_type}: fields=[{fields}] bundle=[{bundle}]")
+    if inspection["warnings"]:
+        typer.echo("Warnings:")
+        for warning in inspection["warnings"]:
+            typer.echo(f"  - {warning}")
+    if inspection["issues"]:
+        typer.echo("Issues:")
+        for issue in inspection["issues"]:
+            typer.echo(f"  - {issue}")
+        raise typer.Exit(code=1)
+
+
+@topic_app.command("inspect-outline")
+def topic_inspect_outline(topic: TopicOption) -> None:
+    inspection = inspect_outline(topic)
+    typer.echo(f"Valid: {str(inspection['valid']).lower()}")
+    typer.echo(f"Sections ({inspection['section_count']}):")
+    for section in inspection["sections"]:
+        typer.echo(f"  - {section}")
+    if inspection["candidate_headings"]:
+        typer.echo("Candidate headings:")
+        for heading in inspection["candidate_headings"]:
+            typer.echo(f"  - {heading}")
     if inspection["warnings"]:
         typer.echo("Warnings:")
         for warning in inspection["warnings"]:
@@ -353,6 +376,13 @@ def run_round6(
     force: ForceOption = False,
     workers: WorkersOption = 1,
 ) -> None:
+    outline_inspection = inspect_outline(topic)
+    if not outline_inspection["valid"]:
+        typer.echo("ERROR: outline.md is not ready for round6. Run `survey topic inspect-outline` for details.")
+        for issue in outline_inspection["issues"]:
+            typer.echo(f"  - {issue}")
+        raise typer.Exit(code=1)
+
     client = LLMClient.from_topic(topic)
     assign_result = assign_section.assign_section(
         topic,

@@ -311,6 +311,12 @@ Writes `outline_candidates_v1.md`. Each candidate contains a chapter tree (H2/H3
 
 **Human gate:** pick one candidate, edit section names and ordering as needed, and save as `outline.md` in the topic directory. This file is never overwritten by the system.
 
+Before Round 6, check that `outline.md` contains only the final outline, not the full candidate proposal:
+
+```bash
+uv run survey topic inspect-outline --topic my_topic
+```
+
 ---
 
 ### Round 6 — Section assignment and bundle generation
