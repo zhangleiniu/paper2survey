@@ -12,6 +12,7 @@ from survey_system.io.bib import parse_bib_entries
 from survey_system.io.contracts import OpResult
 from survey_system.io.papers import read_papers
 from survey_system.io.runlog import write_run_log
+from survey_system.io.schemas import current_schema_version, inspect_schema_payload, load_schema_payload
 from survey_system.llm.client import LLMClient
 from survey_system.ops import (
     assign_section,
@@ -139,6 +140,40 @@ def topic_curate_anchors(topic: TopicOption) -> None:
 def topic_promote_schema(topic: TopicOption, version: VersionOption) -> None:
     path = design_schema.promote_schema(topic, version)
     typer.echo(f"Promoted schema {version}; wrote {path}. Re-run extraction with survey run round4 --force.")
+
+
+@topic_app.command("inspect-schema")
+def topic_inspect_schema(
+    topic: TopicOption,
+    version: Annotated[str | None, typer.Option("--version")] = None,
+) -> None:
+    selected_version = version or current_schema_version(topic)
+    payload = load_schema_payload(topic, selected_version)
+    prior = None
+    current_version = current_schema_version(topic)
+    if selected_version != current_version:
+        prior = load_schema_payload(topic, current_version)
+    inspection = inspect_schema_payload(payload, prior=prior)
+
+    typer.echo(f"Schema: {inspection['version']}")
+    typer.echo(f"Valid: {str(inspection['valid']).lower()}")
+    typer.echo(f"Universal fields ({len(inspection['universal_fields'])}):")
+    for field in inspection["universal_fields"]:
+        typer.echo(f"  - {field}")
+    typer.echo("Paper types:")
+    for paper_type, info in inspection["by_type"].items():
+        fields = ", ".join(info["fields"])
+        bundle = ", ".join(info["bundle_fields"])
+        typer.echo(f"  - {paper_type}: fields=[{fields}] bundle=[{bundle}]")
+    if inspection["warnings"]:
+        typer.echo("Warnings:")
+        for warning in inspection["warnings"]:
+            typer.echo(f"  - {warning}")
+    if inspection["issues"]:
+        typer.echo("Issues:")
+        for issue in inspection["issues"]:
+            typer.echo(f"  - {issue}")
+        raise typer.Exit(code=1)
 
 
 @run_app.command("parse-pdf")

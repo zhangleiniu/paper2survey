@@ -24,6 +24,17 @@ class FakeSchemaClient:
         return candidate
 
 
+class BadSchemaClient:
+    def complete_structured(self, prompt, schema, model_tier, max_tokens=4096):
+        prior = load_schema_payload(FIXTURE, "v1")
+        candidate = {
+            "version": "v2",
+            "universal": {},
+            "by_type": prior["by_type"],
+        }
+        return candidate
+
+
 def test_design_schema_writes_next_candidate(tmp_path: Path) -> None:
     topic = _topic_with_anchor_l0(tmp_path)
 
@@ -54,6 +65,16 @@ def test_design_schema_requires_anchors(tmp_path: Path) -> None:
 
     assert result.failed
     assert "anchors" in result.failed[0].reason or "missing" in result.failed[0].reason
+
+
+def test_design_schema_rejects_low_quality_candidate(tmp_path: Path) -> None:
+    topic = _topic_with_anchor_l0(tmp_path)
+
+    result = design_schema(topic, llm_client=BadSchemaClient())
+
+    assert result.failed
+    assert "universal" in result.failed[0].reason
+    assert not (topic / "schemas" / "schema_v2.json").exists()
 
 
 def _topic_with_anchor_l0(tmp_path: Path) -> Path:

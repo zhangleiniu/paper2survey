@@ -53,6 +53,77 @@ def topic_schema_from_payload(payload: dict[str, Any]) -> TopicSchema:
     return schema
 
 
+def inspect_schema_payload(payload: dict[str, Any], prior: dict[str, Any] | None = None) -> dict[str, Any]:
+    issues: list[str] = []
+    warnings: list[str] = []
+    universal = payload.get("universal")
+    by_type = payload.get("by_type")
+
+    universal_fields: list[str] = []
+    if not isinstance(universal, dict):
+        issues.append("universal must be an object schema")
+    else:
+        universal_fields = _schema_property_names(universal)
+        _inspect_object_schema(universal, "universal", issues, warnings, require_fields=True)
+
+    by_type_summary: dict[str, dict[str, Any]] = {}
+    if not isinstance(by_type, dict):
+        issues.append("by_type must be an object")
+    else:
+        missing_types = sorted(set(PAPER_TYPES) - set(by_type))
+        extra_types = sorted(set(by_type) - set(PAPER_TYPES))
+        if missing_types:
+            issues.append(f"by_type is missing paper types: {missing_types}")
+        if extra_types:
+            warnings.append(f"by_type has non-standard paper types: {extra_types}")
+
+        for paper_type in PAPER_TYPES:
+            schema = by_type.get(paper_type)
+            fields: list[str] = []
+            bundle_fields: list[str] = []
+            if not isinstance(schema, dict):
+                issues.append(f"by_type.{paper_type} must be an object schema")
+            else:
+                fields = _schema_property_names(schema)
+                _inspect_object_schema(schema, f"by_type.{paper_type}", issues, warnings, require_fields=True)
+                bundle = schema.get("_bundle_fields", [])
+                if not isinstance(bundle, list):
+                    issues.append(f"by_type.{paper_type}._bundle_fields must be a list")
+                else:
+                    bundle_fields = [str(field) for field in bundle]
+                    unknown_bundle = sorted(set(bundle_fields) - set(fields))
+                    if unknown_bundle:
+                        issues.append(
+                            f"by_type.{paper_type}._bundle_fields references unknown fields: {unknown_bundle}"
+                        )
+            by_type_summary[paper_type] = {"fields": fields, "bundle_fields": bundle_fields}
+
+    removed_universal: list[str] = []
+    if prior is not None:
+        removed_universal = sorted(
+            set(prior.get("universal", {}).get("properties", {})) - set(universal_fields)
+        )
+        if removed_universal:
+            warnings.append(f"universal removed fields from prior schema: {removed_universal}")
+
+    return {
+        "version": str(payload.get("version", "")),
+        "valid": not issues,
+        "issues": issues,
+        "warnings": warnings,
+        "universal_fields": universal_fields,
+        "by_type": by_type_summary,
+        "removed_universal_fields": removed_universal,
+    }
+
+
+def validate_schema_quality(payload: dict[str, Any], prior: dict[str, Any] | None = None) -> None:
+    topic_schema_from_payload(payload)
+    inspection = inspect_schema_payload(payload, prior=prior)
+    if inspection["issues"]:
+        raise SchemaValidationError("; ".join(inspection["issues"]))
+
+
 def next_schema_version(topic_path: Path) -> str:
     current = current_schema_version(topic_path)
     number = _version_number(current)
@@ -60,7 +131,12 @@ def next_schema_version(topic_path: Path) -> str:
 
 
 def write_schema_candidate(topic_path: Path, payload: dict[str, Any]) -> Path:
-    topic_schema_from_payload(payload)
+    prior = None
+    try:
+        prior = load_schema_payload(topic_path, current_schema_version(topic_path))
+    except (FileNotFoundError, KeyError, SchemaValidationError):
+        prior = None
+    validate_schema_quality(payload, prior=prior)
     version = str(payload["version"])
     directory = schemas_dir(topic_path)
     directory.mkdir(parents=True, exist_ok=True)
@@ -74,7 +150,12 @@ def promote_schema(topic_path: Path, version: str) -> Path:
     if not path.exists():
         raise FileNotFoundError(path)
     payload = load_schema_payload(topic_path, version)
-    topic_schema_from_payload(payload)
+    prior = None
+    try:
+        prior = load_schema_payload(topic_path, current_schema_version(topic_path))
+    except (FileNotFoundError, KeyError, SchemaValidationError):
+        prior = None
+    validate_schema_quality(payload, prior=prior)
     provenance = dict(payload.get("_provenance", {}))
     provenance["promoted_at"] = datetime.now(UTC).isoformat()
     payload["_provenance"] = provenance
@@ -171,6 +252,44 @@ def _matches_type(value: Any, expected_type: str) -> bool:
     if expected_type == "boolean":
         return isinstance(value, bool)
     return True
+
+
+def _inspect_object_schema(
+    schema: dict[str, Any],
+    path: str,
+    issues: list[str],
+    warnings: list[str],
+    *,
+    require_fields: bool,
+) -> None:
+    if schema.get("type") != "object":
+        issues.append(f"{path}.type must be 'object'")
+
+    properties = schema.get("properties")
+    if not isinstance(properties, dict):
+        issues.append(f"{path}.properties must be an object")
+        properties = {}
+    elif require_fields and not properties:
+        issues.append(f"{path}.properties must not be empty")
+
+    required = schema.get("required", [])
+    if not isinstance(required, list):
+        issues.append(f"{path}.required must be a list")
+        required = []
+
+    missing_required = sorted(set(str(field) for field in required) - set(properties))
+    if missing_required:
+        issues.append(f"{path}.required references unknown fields: {missing_required}")
+
+    if schema.get("additionalProperties") is not False:
+        warnings.append(f"{path}.additionalProperties should be false")
+
+
+def _schema_property_names(schema: dict[str, Any]) -> list[str]:
+    properties = schema.get("properties", {})
+    if not isinstance(properties, dict):
+        return []
+    return sorted(str(name) for name in properties)
 
 
 def _version_number(version: str) -> int:

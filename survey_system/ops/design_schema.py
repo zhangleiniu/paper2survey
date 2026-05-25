@@ -80,7 +80,13 @@ def design_schema(
         result.duration_seconds = time.monotonic() - started
         return result
 
-    path = write_schema_candidate(topic_path, candidate)
+    try:
+        path = write_schema_candidate(topic_path, candidate)
+    except Exception as exc:
+        result.failed.append(FailureItem(reason=f"candidate schema invalid: {exc}"))
+        result.duration_seconds = time.monotonic() - started
+        return result
+
     result.processed.append(next_version)
     result.artifacts_written.append(path)
     result.duration_seconds = time.monotonic() - started

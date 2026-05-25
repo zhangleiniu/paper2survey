@@ -258,10 +258,11 @@ uv run survey run schema-design --topic my_topic
 Writes `schemas/schema_v2.json` (or the next available version). Review and edit it manually, then promote:
 
 ```bash
+uv run survey topic inspect-schema --topic my_topic --version v2
 uv run survey topic promote-schema --topic my_topic --version v2
 ```
 
-This updates `schemas/current.txt`. The schema has two parts:
+`inspect-schema` summarizes field coverage and flags invalid candidates, such as an empty `universal` schema or `_bundle_fields` that reference missing fields. Promotion refuses schemas that fail these guards. Successful promotion updates `schemas/current.txt`. The schema has two parts:
 
 - **`universal`** — fields extracted for every paper: `problem`, `contributions`, `datasets`, `limitations`
 - **`by_type`** — additional fields per paper type (e.g., `method_idea` and `main_results` for method papers)

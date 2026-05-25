@@ -28,3 +28,12 @@ def test_topic_validate_reports_missing_pdf(tmp_path: Path) -> None:
 
     assert result.exit_code == 1
     assert "missing PDF for lee2023gadgets" in result.output
+
+
+def test_topic_inspect_schema_reports_fields() -> None:
+    result = runner.invoke(app, ["topic", "inspect-schema", "--topic", str(FIXTURE)])
+
+    assert result.exit_code == 0
+    assert "Schema: v1" in result.output
+    assert "Valid: true" in result.output
+    assert "problem" in result.output
