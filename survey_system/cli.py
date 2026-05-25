@@ -8,6 +8,7 @@ import typer
 
 from survey_system.config import load_config
 from survey_system.io.anchors import curate_anchors
+from survey_system.io.assignments import inspect_assignments
 from survey_system.io.bib import parse_bib_entries
 from survey_system.io.contracts import OpResult
 from survey_system.io.outline import inspect_outline
@@ -188,6 +189,35 @@ def topic_inspect_outline(topic: TopicOption) -> None:
         typer.echo("Candidate headings:")
         for heading in inspection["candidate_headings"]:
             typer.echo(f"  - {heading}")
+    if inspection["warnings"]:
+        typer.echo("Warnings:")
+        for warning in inspection["warnings"]:
+            typer.echo(f"  - {warning}")
+    if inspection["issues"]:
+        typer.echo("Issues:")
+        for issue in inspection["issues"]:
+            typer.echo(f"  - {issue}")
+        raise typer.Exit(code=1)
+
+
+@topic_app.command("inspect-assignments")
+def topic_inspect_assignments(
+    topic: TopicOption,
+    low_confidence_below: Annotated[float, typer.Option("--low-confidence-below")] = 0.7,
+    overloaded_above: Annotated[int, typer.Option("--overloaded-above")] = 5,
+) -> None:
+    inspection = inspect_assignments(
+        topic,
+        low_confidence_below=low_confidence_below,
+        overloaded_above=overloaded_above,
+    )
+    typer.echo(f"Valid: {str(inspection['valid']).lower()}")
+    typer.echo(f"Assigned: {inspection['assigned']}/{inspection['total']}")
+    typer.echo(f"Assignments file: {inspection['path']}")
+    typer.echo("Section counts:")
+    for section, count in inspection["section_counts"].items():
+        typer.echo(f"  - {count}: {section}")
+    typer.echo(f"Secondary assignments: {inspection['secondary_count']}")
     if inspection["warnings"]:
         typer.echo("Warnings:")
         for warning in inspection["warnings"]:

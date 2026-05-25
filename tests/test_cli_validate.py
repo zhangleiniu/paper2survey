@@ -45,3 +45,21 @@ def test_topic_inspect_outline_reports_sections() -> None:
     assert result.exit_code == 0
     assert "Valid: true" in result.output
     assert "1. Foundations / 1.1 Widget Surveys" in result.output
+
+
+def test_topic_inspect_assignments_reports_counts(tmp_path: Path) -> None:
+    topic = tmp_path / "mini_topic"
+    shutil.copytree(FIXTURE, topic)
+    (topic / "section_assignments_v1.csv").write_text(
+        "bib_key,primary_section_path,secondary_section_paths,confidence,reason\n"
+        "smith2024widgets,1. Foundations / 1.1 Widget Surveys,,0.9,ok\n"
+        "lee2023gadgets,1. Foundations / 1.2 Gadget Benchmarks,,0.9,ok\n"
+        "patel2022systems,2. Systems / 2.1 Tool Workflows,,0.9,ok\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["topic", "inspect-assignments", "--topic", str(topic)])
+
+    assert result.exit_code == 0
+    assert "Assigned: 3/3" in result.output
+    assert "Section counts:" in result.output

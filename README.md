@@ -338,6 +338,12 @@ Each bundle contains: section description from the outline → anchor papers in 
 
 **Human gate:** check low-confidence rows in `section_assignments_v1.csv`. Adjust `outline.md` or patch assignments manually if sections are unbalanced.
 
+Use the assignment inspector to catch missing papers, empty or overloaded sections, and low-confidence assignments:
+
+```bash
+uv run survey topic inspect-assignments --topic my_topic
+```
+
 ---
 
 ### Round 7 — Section drafting
