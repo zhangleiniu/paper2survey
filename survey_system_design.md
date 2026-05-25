@@ -50,6 +50,25 @@ A GUI or web frontend may be added later (for editing `papers.csv`, working thro
 
 These constraints demote "UI" from a feature to a frontend option — a web/desktop frontend can be added at any time as long as it reads/writes the same files and calls the same op functions.
 
+### 1.5 Pipeline philosophy after topic-scale use
+
+The system is a **structured writing-preparation pipeline**, not an autonomous survey author. Its strongest invariant is that every major step leaves a human-readable or inspectable artifact behind. The intended use is:
+
+1. Compress the corpus into progressively smaller representations.
+2. Insert human gates at irreversible decisions.
+3. Use inspection commands to distinguish "file exists" from "artifact is complete and safe to trust."
+4. Draft final prose manually from section bundles.
+
+In practice, the highest-risk artifacts are not L0/L1/L2 themselves, but the **aggregate control artifacts**:
+
+- `anchors.csv` can be empty if no candidate row was marked `your_decision = yes`.
+- `schema_vN.json` can be syntactically present but semantically weak.
+- `outline.md` can accidentally contain multiple candidate outlines.
+- `bundles/` can contain stale files after an outline change.
+- `_review_needed.csv` is append-only history, not current truth.
+
+Therefore, quality inspection is a first-class design concern, not a polish feature.
+
 ---
 
 ## 2. Core Abstractions
@@ -103,6 +122,20 @@ Specifically:
 
 This table is the engineering contract that lets the system scale. Every op's spec must fit on one of these rows.
 
+### 2.4 Human-gate inspection surfaces
+
+Every human gate should have a small, explicit inspection surface:
+
+| Decision | Primary artifact | Inspection command | Failure caught |
+|---|---|---|---|
+| Topic setup | `papers.csv`, `references.bib`, `pdfs/` | `survey topic validate` | missing PDFs, BibTeX mismatch |
+| Schema promotion | `schemas/schema_vN.json` | `survey topic inspect-schema` | empty universal fields, broken bundle fields |
+| Outline finalization | `outline.md` | `survey topic inspect-outline` | full candidate proposal copied as final outline |
+| Assignment review | `section_assignments_v1.csv` | `survey topic inspect-assignments` | missing papers, overload, low confidence |
+| Whole pipeline status | topic directory | `survey topic status --detailed` | incomplete coverage, stale bundles, stale review items |
+
+Inspection commands must not mutate state. They are deliberately separate from the ops that generate artifacts.
+
 ---
 
 ## 3. Operations
@@ -121,7 +154,7 @@ Convert a PDF into markdown. **This is the first step of the pipeline** — with
 
 - **Input:** `pdfs/{pdf_filename}` (a PDF file referenced from `papers.csv:pdf_filename`)
 - **Output:** `papers/{bib_key}/L0.md` (full-text markdown), and optionally `papers/{bib_key}/_images/` for any figures Marker extracts
-- **Implementation:** uses [Marker](https://github.com/datalab-to/marker) (`marker-pdf` on PyPI). Marker is the default because it preserves headings, tables, equations, and reading order better than naive extractors — critical for downstream LLM consumption.
+- **Implementation:** uses [Marker](https://github.com/datalab-to/marker) (`marker-pdf` on PyPI) by default. Marker preserves headings, tables, equations, and reading order better than naive extractors. A fast PyMuPDF backend is available for text-only digital PDFs.
 - **Model tier:** N/A for the LLM client (Marker runs its own local vision models — ~3–5 GB VRAM, or CPU if no GPU is available)
 - **Context budget:** N/A (the LLM is not called here)
 - **Failure modes:**
@@ -132,7 +165,9 @@ Convert a PDF into markdown. **This is the first step of the pipeline** — with
 - **Configuration knobs** exposed via `config.yaml`:
   - `force_ocr` (bool) — force OCR even on digital PDFs; useful for older scanned papers
   - `use_llm` (bool) — Marker's optional LLM-assisted mode that improves table/equation accuracy at extra cost
-  - `torch_device` ("cpu" / "cuda" / "mps") — passed through to Marker
+  - `torch_device` (`auto` / `cpu` / `cuda` / `mps`) — `auto` resolves to a real PyTorch device before calling Marker
+  - `save_images` (bool) — write extracted images only when needed; downstream text-only pipeline does not consume them
+  - `backend` (`marker` / `pymupdf`) — choose richer local ML parsing or fast text extraction
 - **Note on metadata:** Marker also emits a metadata JSON (title, page count, etc.). The system **ignores it** — `papers.csv` is the authoritative metadata source (see §2.1).
 
 #### `triage(L0_excerpt) → meta`
@@ -201,7 +236,9 @@ Convert a PDF into markdown. **This is the first step of the pipeline** — with
   1. For each anchor, ask the LLM to extract "the dimensions this paper uses to compare other methods" and "any explicit taxonomy proposals."
   2. Aggregate: any dimension mentioned by ≥3 anchors goes into the schema; conflicting dimensions are listed for review.
   3. Split by paper_type into sub-schemas (universal + by_type).
-- **Human gate:** review the candidate schema, edit manually if needed, mark as current.
+- **Human gate:** run schema inspection, review the candidate schema, edit manually if needed, mark as current.
+- **Quality guardrails:** promotion must reject candidates with an empty or malformed `universal` object, missing paper types, invalid `required` references, or `_bundle_fields` that point to fields not present in the type schema.
+- **Design note:** schema design is a draft generator. It should preserve useful prior fields unless the human explicitly accepts a breaking change.
 
 #### `build_vocabulary(L1_of_all) → vocabulary_v{n}`
 
@@ -222,7 +259,7 @@ Convert a PDF into markdown. **This is the first step of the pipeline** — with
   - The estimated paper count per section (so you can see bucket balance)
   - A short trade-off analysis
 - **Anchor weighting:** anchor papers' L3s are explicitly tagged in the prompt, and the LLM is told that the outline must cover them well.
-- **Human gate:** pick one candidate, edit section names / order / merges, save as `outline.md`.
+- **Human gate:** pick one candidate, edit section names / order / merges, save as `outline.md`, then inspect it. `outline.md` must contain one final H2/H3 tree, not the full candidate proposal.
 
 #### `build_bundles(L1+L2 of all, section_assignments, anchors) → bundles/`
 
@@ -236,6 +273,7 @@ Convert a PDF into markdown. **This is the first step of the pipeline** — with
   - **Cross-references** (if any): papers whose `secondary_section` hits this section — title + bib_key only
   - Every entry carries its `bib_key` for `\cite{}` use
 - **Ordering:** anchors first, then by year or sub-cluster
+- **Stale handling:** forced rebuilds remove bundle markdown files that do not correspond to the current parsed outline.
 
 ---
 
@@ -292,7 +330,7 @@ Round 7  Section drafting     → actual writing (in chat)
 - **Input:** the L0 of anchor papers (from `anchors.csv`)
 - **Ops:** `design_schema`
 - **Output:** `schemas/schema_v1.json`
-- **Human gate:** review, edit manually, mark current
+- **Human gate:** inspect, review, edit manually, mark current
 - **Purpose:** define "for this topic, what structured fields are worth extracting from every paper."
 
 ### Round 4 — Deep extraction
@@ -317,7 +355,7 @@ Round 7  Section drafting     → actual writing (in chat)
 - **Input:** each paper's L2, `outline.md`, `anchors.csv`
 - **Ops:** `assign_section` (per paper) → `build_bundles`
 - **Output:** `section_assignments_v1.csv`, `bundles/section_*.md`
-- **Human gate:** scan low-confidence rows, adjust the outline or hand-patch assignments
+- **Human gate:** inspect assignment quality, scan low-confidence rows, adjust the outline or hand-patch assignments
 - **Purpose:** one writing-ready context file per section.
 
 ### Round 7 — Section drafting
@@ -328,12 +366,25 @@ Round 7  Section drafting     → actual writing (in chat)
 - **Human gate:** writing is the gate
 - **Purpose:** the survey draft.
 
+The system stops at writing bundles intentionally. A bundle is a context package for one section, not finished prose. The recommended drafting loop is: choose one bundle, ask a chat model to synthesize across papers with citations, manually edit, then cross-check against L1 fields and BibTeX keys.
+
 ### Loop-back triggers
 
 - Round 5 suspects the L1 fields don't differentiate papers enough → back to Round 3 to upgrade the schema → Round 4 re-extracts affected papers → back to Round 5
 - Round 6 has too many outliers → back to Round 5 to change the outline
 - Round 7 reveals mid-draft that a section needs to be split → back to Round 5/6 for the affected subtree
 - New papers added → for the new papers only, run Round 0 → 1 → 4 → 6 (anchors / schema / outline are not changed unless the new batch introduces new dimensions)
+
+### Current quality reports
+
+The mature pipeline should expose these non-mutating reports:
+
+- `topic status --detailed`: coverage of each round, active vs. stale review items, assignment coverage, bundle staleness
+- `topic inspect-schema`: field coverage, validation issues, warnings about removed universal fields
+- `topic inspect-outline`: parsed sections and candidate-output leftovers
+- `topic inspect-assignments`: section counts, empty sections, overloaded sections, low confidence rows
+
+These reports are part of the correctness model. A generated file is not enough to declare a round complete; the report must show adequate coverage and no blocking issues.
 
 ---
 

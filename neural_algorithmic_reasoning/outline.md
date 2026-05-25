@@ -1,5 +1,3 @@
-# Candidate 1: Architecture and Inductive Biases in Neural Algorithmic Reasoning (Structural Focus)
-
 ## Introduction and Foundations
 ### Defining the Neural Algorithmic Reasoning (NAR) Paradigm
 * Establishing the foundations of NAR (velivckovic2021neural).

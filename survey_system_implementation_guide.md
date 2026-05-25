@@ -49,6 +49,8 @@ Concrete providers (Anthropic, Gemini, OpenAI) are backends. `model_tier` is map
 
 Implement one provider in Phase 0 (recommended: Anthropic, since its `tool_use` is the most stable path to structured output). Add a second provider in Phase 8.
 
+Current implementation supports Anthropic, OpenAI, and Vertex AI. Vertex AI uses Application Default Credentials, with project/location read from `config.yaml:vertexai` before falling back to `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION`. For short structured Gemini calls, `vertexai.thinking_budget: 0` prevents hidden thinking tokens from exhausting small output budgets.
+
 ### 1.3 Package layout
 
 ```
@@ -68,6 +70,8 @@ survey_system/
     llm/
         client.py         # Abstraction layer
         anthropic.py      # Concrete backend
+        openai.py         # Concrete backend
+        vertexai.py       # Concrete backend
         prompts/          # All prompt templates
     ops/
         __init__.py
@@ -135,6 +139,8 @@ The CLI renders `OpResult` for humans; a UI consumes it as JSON.
 - ❌ Concatenating path strings (use `paths.py`)
 - ❌ Reading `os.environ` directly (use `config.py`)
 - ❌ Silently swallowing schema validation errors (always write to `_review_needed.csv`)
+
+Configuration note: provider backends may read provider-specific environment fallbacks when explicitly documented, but topic-owned settings should live in `config.yaml` first.
 
 ---
 
@@ -242,12 +248,18 @@ Running `survey run round0 --topic <path>` produces `papers/<bib_key>/L0.md` for
 - `pdf/marker_backend.py`: a thin wrapper around the Marker Python API. Lazy-loads Marker models (they're large — ~3–5 GB VRAM, model files cached locally on first use). Exposes:
   ```python
   class MarkerBackend:
-      def __init__(self, torch_device: str = "auto", force_ocr: bool = False, use_llm: bool = False): ...
+      def __init__(
+          self,
+          torch_device: str = "auto",
+          force_ocr: bool = False,
+          use_llm: bool = False,
+          save_images: bool = False,
+      ): ...
       def convert(self, pdf_path: Path) -> ParsedPdf:
           """Returns ParsedPdf(markdown: str, images: dict[str, bytes], page_count: int)."""
   ```
   Models are loaded lazily on the first `convert()` call and cached on the instance — never load them in module import. A single `MarkerBackend` instance processes many PDFs in one process to amortize the model-load cost.
-- `ops/parse_pdf.py`: implements the `parse_pdf` op (design §3.1). Per-paper. Writes `papers/<bib_key>/L0.md` and, if Marker emits images, writes them under `papers/<bib_key>/_images/`.
+- `ops/parse_pdf.py`: implements the `parse_pdf` op (design §3.1). Per-paper. Writes `papers/<bib_key>/L0.md` and, when `marker.save_images: true`, writes Marker images under `papers/<bib_key>/_images/`.
 - `cli.py`: register `run parse-pdf [--bib-key K] [--limit N]` and `run round0` (single-op round; just calls `parse_pdf` on every included paper).
 - Marker is an **optional install group** in `pyproject.toml`: `pip install -e ".[marker]"`. Document this in `README.md`. The reason: Marker pulls in PyTorch and several GB of model dependencies; users running tests on contracts/IO logic shouldn't be forced to install it.
 
@@ -264,10 +276,12 @@ Running `survey run round0 --topic <path>` produces `papers/<bib_key>/L0.md` for
   markdown, _, images = text_from_rendered(rendered)
   ```
   `markdown` is a string. `images` is a dict mapping filename → PIL image (or bytes, depending on Marker version) — check the Marker version installed and adapt.
-- **Configuration is passed via `create_model_dict()` kwargs or environment variables:**
-  - `TORCH_DEVICE=cuda` (or `cpu`, `mps`) — set before importing Marker if you want to control device
+- **Configuration is passed through `config.yaml:marker`:**
+  - `torch_device=auto` resolves to `cuda`, `mps`, or `cpu` before calling Marker; explicit `cpu`, `cuda`, and `mps` are preserved
   - `force_ocr` is a per-conversion flag (passable via Marker's `ConfigParser`)
   - `use_llm=True` enables Marker's optional LLM mode (better tables/equations, extra cost; requires a Gemini or other LLM API key). Off by default in this system.
+  - `save_images=False` is the default because downstream rounds currently consume text, not image bytes.
+  - `backend=pymupdf` selects a faster text-only backend for digital PDFs.
 - **Idempotency:** if `papers/<bib_key>/L0.md` exists and is non-empty and `force == False`, skip. Marker is the slowest non-LLM step in the pipeline; cheap skips matter.
 - **Error handling:**
   - PDF not found → `MissingDependencyError("pdfs/<filename> not found")`; the CLI tells the user to add the PDF
@@ -275,8 +289,8 @@ Running `survey run round0 --topic <path>` produces `papers/<bib_key>/L0.md` for
   - L0 shorter than `parse_pdf_min_chars` (default 1000) → write L0 anyway (it might still be usable) **and** flag in `_review_needed.csv` for human inspection
   - Any other Marker exception → retry once; if still failing, flag for review
 - **Image handling:**
-  - Marker emits images keyed by relative filenames (e.g., `_page_3_Figure_1.png`). Write them under `papers/<bib_key>/_images/`.
-  - The L0 markdown references images by these relative filenames; do not rewrite the references — the relative path remains valid when L0 and `_images/` are siblings.
+  - Marker can emit images keyed by relative filenames (e.g., `_page_3_Figure_1.png`).
+  - Only normalize and write those images when `marker.save_images` is true. Text-only survey writing generally should leave this false.
 - **Memory:** Marker holds models in VRAM/RAM. If processing many papers in one CLI invocation, the same `MarkerBackend` instance must be reused across all papers in that run. **Do not instantiate a fresh `MarkerBackend` per paper** (it reloads the models each time).
 - **Logging:** for each paper: log the PDF path, page count, output length (chars), duration. These are useful for debugging slow / failed conversions.
 
@@ -305,6 +319,7 @@ README.md                                          # Updated install instruction
 - [ ] Mocked test: when `MarkerBackend.convert` raises, the op writes to `_review_needed.csv` and does **not** create L0; the op returns `OpResult` with that paper in `failed[]`
 - [ ] Mocked test: when Marker returns an L0 shorter than `parse_pdf_min_chars`, L0 is written **and** a row goes to `_review_needed.csv`
 - [ ] `MarkerBackend` is instantiated exactly once per CLI invocation (verifiable by counting model-load log lines)
+- [ ] With `marker.save_images = false`, no `_images/` files are written even if Marker returns images
 
 ### Defer
 
@@ -332,6 +347,7 @@ Running `survey run round1 --topic mini_topic` generates `meta.json` and `L3.txt
 - `ops/triage.py`: implements `triage()` (design §3.1)
 - `ops/summarize.py`: implements `summarize_L3()`
 - `cli.py`: register `run triage --topic X [--bib-key K] [--limit N]` and `run round1` (orchestrates triage → summarize_L3)
+- Progress reporting: round1 should print per-paper stage progress (`triage [i/n]`, `summarize_L3 [i/n]`) so long LLM runs do not look stuck.
 
 ### Implementation notes
 
@@ -362,6 +378,7 @@ tests/test_ops_summarize.py
 - [ ] **Idempotency:** a second `round1` run skips every paper (unless `--force`)
 - [ ] Force a mocked LLM response to return an out-of-enum `paper_type`: assert that `_review_needed.csv` gets a row and `meta.json` has default values
 - [ ] Mark a paper `include = no`, re-run round1: that paper is skipped
+- [ ] Vertex/Gemini short structured calls can complete L3 with a small max token budget when `thinking_budget` is configured
 
 ### Defer
 
@@ -551,12 +568,15 @@ Run `survey run round2 --topic <path>` → produce `anchors_candidates_v1.csv` �
 - `ops/design_schema.py` (design §3.2)
 - `io/schemas.py` expansion: version management, writing `current.txt`, computing schema diffs
 - `cli.py`: `run schema-design`, `topic promote-schema --version vN`, `run extract --since-schema vN` (only re-extracts papers with `_schema_version < vN`)
+- `topic inspect-schema`: non-mutating schema quality report for human review before promotion
 
 ### Acceptance criteria
 
 - [ ] `design_schema` reads L0 for each anchor in `anchors.csv` (note: total tokens may exceed the capable model's context — **implement chunk-and-aggregate**: process anchors in groups of 5, then merge)
 - [ ] Output `schema_vN.json` candidate includes `_provenance` (design §5)
 - [ ] `extract --since-schema vN` only processes papers whose L1 has `_schema_version != "vN"`
+- [ ] `inspect-schema` reports universal fields, per-type fields, bundle fields, warnings, and blocking issues
+- [ ] `promote-schema` rejects empty/malformed `universal`, missing paper types, invalid required fields, and `_bundle_fields` that reference unknown properties
 
 ### Defer
 
@@ -565,7 +585,7 @@ Run `survey run round2 --topic <path>` → produce `anchors_candidates_v1.csv` �
 
 ---
 
-## 10. Phase 8 — Polish
+## 10. Phase 8 — Polish and quality gates
 
 ### Goal
 
@@ -574,17 +594,24 @@ Make the system suitable for long-term use: logging, status queries, concurrency
 ### Scope
 
 - `_runs/{op}_{timestamp}.log` JSONL logging: one line per op invocation (start, end, processed, failed, cost)
-- `status.py` full implementation: returns a dict with per-round completion percentage, pending review items, recent op runs
+- `status.py` full implementation: returns a dict with per-round completion percentage, active/stale review items, recent op runs, assignment coverage, and bundle staleness
 - `cli.py`: `topic status --detailed` shows a per-round completion table
 - `survey review --topic <path>`: interactive walk of `_review_needed.csv` (CLI accepts y/n/skip; does **not** break UI-readiness — the review CSV is still externally editable)
 - Per-paper op concurrency: `triage`, `extract`, `summarize`, `assign_section` accept `--workers N`. **`parse_pdf` does not get this flag** — Marker's bottleneck is VRAM, and parallel conversion typically saturates a single GPU already.
 - Second LLM provider (Gemini or OpenAI), verifying the `LLMClient` abstraction
 - Alternative PDF backend (optional): pluggable in `pdf/` as `pymupdf_backend.py`, selected via config. Faster and lighter than Marker for digital PDFs without complex tables/equations.
+- `topic inspect-outline`: detect copied candidate proposal content before Round 6
+- `topic inspect-assignments`: report coverage, section counts, empty/overloaded sections, low confidence rows, invalid sections
+- Forced bundle rebuilds remove stale bundle markdown files that no longer correspond to the current outline
 
 ### Acceptance criteria
 
 - [ ] After a round1 run, `_runs/` contains JSONL logs you can `cat` to see structured records
-- [ ] `topic status` prints a table showing per-round completion for mini_topic
+- [ ] `topic status` prints per-round completion for mini_topic and distinguishes active vs stale review items
+- [ ] `topic status` marks Round 6 assignments incomplete if assignment rows do not cover every included paper
+- [ ] `topic status` marks bundles incomplete if stale bundle files remain
+- [ ] `inspect-outline` rejects an `outline.md` that still contains `# Candidate ...`
+- [ ] `inspect-assignments` reports overloaded sections and low-confidence rows
 - [ ] `--workers 4` on `extract` is measurably faster than `--workers 1` (even on a small fixture)
 - [ ] Switching to the second LLM provider, re-running round1 on one paper produces structurally valid output
 

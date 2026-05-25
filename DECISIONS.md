@@ -62,3 +62,15 @@
 - `--workers` is available on LLM/script per-paper ops to stabilize the CLI contract. The current implementation preserves idempotency and deterministic tests; parse PDF remains sequential because model memory is the bottleneck.
 - LLM provider selection is driven by `models.provider`. Anthropic remains default; OpenAI uses JSON-object structured responses; Vertex AI uses the Google Gen AI SDK with Application Default Credentials and JSON schema responses. Vertex AI project/location are read from `config.yaml:vertexai` first, then `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION`.
 - The optional PyMuPDF PDF backend conforms to the same `convert(...) -> ParsedPdf` contract as Marker and is selected with `marker.backend: pymupdf`.
+
+## Topic-scale quality gates
+
+- Topic status reports current coverage, not just whether artifact files exist. For example, section assignments are complete only when every included paper appears in `section_assignments_v1.csv`.
+- `_review_needed.csv` remains append-only. Status derives active versus stale review rows by comparing each row with current artifacts, so old failures stay auditable without making the topic look permanently broken.
+- Schema generation is a draft step, not an automatic truth source. `inspect-schema` and promotion guards reject malformed universal blocks, missing paper-type schemas, invalid `required` references, and invalid `_bundle_fields`.
+- A generated schema may still be intellectually weak even when structurally valid. The intended workflow is to inspect it, compare it to the previous schema, and only promote it when the added fields improve extraction and bundle quality.
+- `outline.md` is a human-edited final artifact. Candidate headings, trade-off notes, and generated preambles should be removed before section assignment.
+- `inspect-outline` exists because outline quality cannot be judged from file presence. It checks for candidate artifacts, duplicate section paths, shallow structures, and suspicious headings before Round 6.
+- `inspect-assignments` is the review surface for Round 6. It reports coverage, primary section counts, empty sections, overloaded sections, low-confidence rows, and invalid primary paths.
+- Forced bundle rebuilds remove stale bundle markdown files before writing the current bundle set. This keeps `bundles/` aligned with the current outline rather than preserving old section files.
+- Round 7 remains a manual writing stage. The supported final output is a set of section bundles, schema-backed paper extractions, L2 narratives, and quality reports that a human can use to draft a survey.

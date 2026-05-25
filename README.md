@@ -2,6 +2,8 @@
 
 A file-backed pipeline that turns a folder of PDFs into structured writing bundles for academic survey papers. It manages four granularity levels per paper (full text → structured fields → narrative summary → one-sentence card) so that every LLM call sees "just enough" context regardless of corpus size.
 
+The system is not meant to fully automate survey writing. It prepares auditable intermediate artifacts and writing-ready section bundles, while keeping the high-stakes decisions — paper inclusion, anchor selection, schema promotion, outline choice, and final prose — under human control.
+
 ## Install
 
 ```bash
@@ -157,6 +159,21 @@ Round 6  Assign papers to sections, build writing bundles
 Round 7  Write each section (manual, in a chat interface)
 ```
 
+The main artifact chain is:
+
+```
+PDF → L0.md → meta.json + L3.txt → L1.json + L2.md → section_assignments_v1.csv → bundles/*.md
+```
+
+Use the status and inspection commands as quality gates between rounds:
+
+```bash
+uv run survey topic status --topic my_topic --detailed
+uv run survey topic inspect-schema --topic my_topic --version v2
+uv run survey topic inspect-outline --topic my_topic
+uv run survey topic inspect-assignments --topic my_topic
+```
+
 For Anthropic, set `ANTHROPIC_API_KEY` for Rounds 1–6. For OpenAI, set `OPENAI_API_KEY` and `models.provider: openai` in `config.yaml`.
 
 For Vertex AI, authenticate with Application Default Credentials before running LLM-backed rounds:
@@ -245,6 +262,8 @@ uv run survey topic curate-anchors --topic my_topic
 
 This writes `anchors.csv`. Downstream rounds automatically pick it up.
 
+If `anchors.csv` only contains the header, no rows in `anchors_candidates_v1.csv` were marked with `your_decision = yes`. Fill that column before running schema design.
+
 ---
 
 ### Round 3 — Extraction schema design
@@ -262,12 +281,14 @@ uv run survey topic inspect-schema --topic my_topic --version v2
 uv run survey topic promote-schema --topic my_topic --version v2
 ```
 
-`inspect-schema` summarizes field coverage and flags invalid candidates, such as an empty `universal` schema or `_bundle_fields` that reference missing fields. Promotion refuses schemas that fail these guards. Successful promotion updates `schemas/current.txt`. The schema has two parts:
+`inspect-schema` summarizes field coverage and flags invalid candidates, such as an empty `universal` schema, missing paper types, invalid `required` fields, or `_bundle_fields` that reference missing fields. Promotion refuses schemas that fail these guards. Successful promotion updates `schemas/current.txt`. The schema has two parts:
 
 - **`universal`** — fields extracted for every paper: `problem`, `contributions`, `datasets`, `limitations`
 - **`by_type`** — additional fields per paper type (e.g., `method_idea` and `main_results` for method papers)
 
 Each `by_type` entry also has `_bundle_fields` listing which fields to surface in section bundles.
+
+Treat schema design as a draft generator, not an automatic decision. If the generated schema removes important universal fields or looks too sparse, keep the prior schema and validate quality through a small Round 4 run.
 
 **Note:** A hand-written `schemas/schema_v1.json` and `schemas/current.txt` are required before running Round 4 if you skip Round 3. See `tests/fixtures/mini_topic/schemas/` for the format.
 
@@ -290,6 +311,8 @@ uv run survey run round4 --topic my_topic --workers 4    # parallel
 ```
 
 **Cost:** capable model, ~$0.10–$0.30 per paper. This is the main API cost in the pipeline. Run `--limit 3` first.
+
+**Human gate:** inspect several `L1.json` and `L2.md` files. `L1.json` is best for tables and comparisons; `L2.md` is best for reading and drafting. If fields are consistently empty or generic, revise the schema before running all papers.
 
 **Schema upgrades:** if you promote a new schema later, re-extract only affected papers:
 
@@ -316,6 +339,8 @@ Before Round 6, check that `outline.md` contains only the final outline, not the
 ```bash
 uv run survey topic inspect-outline --topic my_topic
 ```
+
+`outline.md` should contain one final H2/H3 tree. Do not leave `# Candidate ...` headings or the candidate `Trade-offs` sections in it.
 
 ---
 
@@ -344,11 +369,30 @@ Use the assignment inspector to catch missing papers, empty or overloaded sectio
 uv run survey topic inspect-assignments --topic my_topic
 ```
 
+When rerunning after outline changes, use `--force`; stale bundle files that no longer match the current outline are removed during forced rebuilds:
+
+```bash
+uv run survey run round6 --topic my_topic --force
+```
+
 ---
 
 ### Round 7 — Section drafting
 
 Paste a bundle file into Claude (or any LLM chat). Ask it to draft that section. This is intentionally not scripted — the writing step benefits from interactive back-and-forth.
+
+Recommended use of the final artifacts:
+
+- `bundles/section_*.md` — paste one bundle at a time into a chat model to draft a section.
+- `papers/<bib_key>/L2.md` — read a single paper quickly.
+- `papers/<bib_key>/L1.json` — build comparison tables and taxonomies.
+- `section_assignments_v1.csv` — inspect or manually patch section placement.
+
+A useful drafting prompt is:
+
+```text
+Write a coherent survey subsection from this bundle. Synthesize across papers rather than listing them one by one. Use citation keys like \cite{...}. Compare methods by task setting, inductive bias, supervision signal, evaluation protocol, and limitations. End with a short synthesis paragraph.
+```
 
 ---
 
@@ -360,6 +404,8 @@ uv run survey topic status --topic my_topic --detailed   # shows review queue
 ```
 
 The review queue (`_review_needed.csv`) is an append-only history from all rounds: failed PDF parses, low-confidence triage, schema validation errors, low-confidence section assignments. `topic status --detailed` separates active items from stale items that have since been resolved by later reruns.
+
+Status is derived from current files, not just the existence of an artifact. For example, Round 6 assignments are complete only when every included paper has an assignment, and bundles are complete only when the bundle files match the current outline with no stale files.
 
 ---
 
