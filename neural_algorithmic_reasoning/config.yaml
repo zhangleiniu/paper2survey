@@ -1,0 +1,43 @@
+topic_name: neural_algorithmic_reasoning
+
+models:
+  provider: vertexai
+  cheap: gemini-3.5-flash
+  capable: gemini-3.5-flash
+  triage: gemini-3.5-flash
+  extract: gemini-3.5-flash
+  summarize: gemini-3.5-flash
+  schema_design: gemini-3.5-flash
+  outline: gemini-3.5-flash
+  assign: gemini-3.5-flash
+
+vertexai:
+  project: surveyagent-496618
+  location: global
+  thinking_budget: 0
+
+thresholds:
+  triage_confidence_review_below: 0.7
+  assign_confidence_review_below: 0.7
+
+marker:
+  backend: marker
+  force_ocr: false
+  use_llm: false
+  torch_device: auto
+  save_images: false
+  parse_pdf_min_chars: 1000
+
+venue_tiers:
+  NeurIPS: 1
+  ICML: 1
+  ICLR: 1
+  AAAI: 2
+  IJCAI: 2
+  AISTATS: 2
+  UAI: 2
+  JMLR: 1
+  TMLR: 2
+  Nature: 1
+  Science: 1
+  arXiv: 3

@@ -1,0 +1,312 @@
+{
+  "version": "v2",
+  "universal": {},
+  "by_type": {
+    "survey": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "type": "string"
+        },
+        "taxonomy": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "open_questions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "scope",
+        "taxonomy",
+        "open_questions"
+      ],
+      "additionalProperties": false,
+      "_bundle_fields": [
+        "scope",
+        "taxonomy",
+        "open_questions"
+      ]
+    },
+    "method": {
+      "type": "object",
+      "properties": {
+        "method_idea": {
+          "type": "string"
+        },
+        "algorithmic_bias": {
+          "type": "string"
+        },
+        "architecture_or_training": {
+          "type": "string"
+        },
+        "main_results": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "method_idea",
+        "algorithmic_bias",
+        "architecture_or_training",
+        "main_results"
+      ],
+      "additionalProperties": false,
+      "_bundle_fields": [
+        "method_idea",
+        "algorithmic_bias",
+        "main_results"
+      ]
+    },
+    "benchmark": {
+      "type": "object",
+      "properties": {
+        "benchmark_goal": {
+          "type": "string"
+        },
+        "tasks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "baselines": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "benchmark_goal",
+        "tasks",
+        "metrics",
+        "baselines"
+      ],
+      "additionalProperties": false,
+      "_bundle_fields": [
+        "benchmark_goal",
+        "tasks",
+        "metrics"
+      ]
+    },
+    "dataset": {
+      "type": "object",
+      "properties": {
+        "dataset_name": {
+          "type": "string"
+        },
+        "data_sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "algorithmic_coverage": {
+          "type": "string"
+        },
+        "known_biases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "dataset_name",
+        "data_sources",
+        "algorithmic_coverage",
+        "known_biases"
+      ],
+      "additionalProperties": false,
+      "_bundle_fields": [
+        "dataset_name",
+        "algorithmic_coverage",
+        "known_biases"
+      ]
+    },
+    "analysis": {
+      "type": "object",
+      "properties": {
+        "analysis_question": {
+          "type": "string"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "failure_modes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "analysis_question",
+        "findings",
+        "failure_modes"
+      ],
+      "additionalProperties": false,
+      "_bundle_fields": [
+        "analysis_question",
+        "findings",
+        "failure_modes"
+      ]
+    },
+    "position": {
+      "type": "object",
+      "properties": {
+        "position": {
+          "type": "string"
+        },
+        "arguments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "implications_for_nar": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "position",
+        "arguments",
+        "implications_for_nar"
+      ],
+      "additionalProperties": false,
+      "_bundle_fields": [
+        "position",
+        "arguments",
+        "implications_for_nar"
+      ]
+    },
+    "application": {
+      "type": "object",
+      "properties": {
+        "application_domain": {
+          "type": "string"
+        },
+        "deployment_context": {
+          "type": "string"
+        },
+        "algorithmic_capability_used": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "application_domain",
+        "deployment_context",
+        "algorithmic_capability_used"
+      ],
+      "additionalProperties": false,
+      "_bundle_fields": [
+        "application_domain",
+        "algorithmic_capability_used"
+      ]
+    },
+    "tool_system": {
+      "type": "object",
+      "properties": {
+        "system_goal": {
+          "type": "string"
+        },
+        "interface_or_workflow": {
+          "type": "string"
+        },
+        "supported_reasoning_tasks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "system_goal",
+        "interface_or_workflow",
+        "supported_reasoning_tasks"
+      ],
+      "additionalProperties": false,
+      "_bundle_fields": [
+        "system_goal",
+        "supported_reasoning_tasks"
+      ]
+    }
+  },
+  "_provenance": {
+    "based_on_anchors": [
+      "de2024simulation",
+      "georgiev2024deep",
+      "li2024open",
+      "estermann2024puzzles",
+      "mcleish2024transformers",
+      "sanford2024understanding",
+      "rodionov2025discrete",
+      "he2025primal",
+      "hashemi2026tropical"
+    ],
+    "promoted_at": "",
+    "generated_at": "2026-05-25T16:00:59.915561+00:00",
+    "delta_from_prev": {
+      "universal": {
+        "added": [],
+        "removed": [
+          "algorithmic_task",
+          "contributions",
+          "datasets",
+          "evaluation_metrics",
+          "limitations",
+          "problem",
+          "reasoning_setting"
+        ]
+      },
+      "by_type": {
+        "analysis": {
+          "added": [],
+          "removed": []
+        },
+        "application": {
+          "added": [],
+          "removed": []
+        },
+        "benchmark": {
+          "added": [],
+          "removed": []
+        },
+        "dataset": {
+          "added": [],
+          "removed": []
+        },
+        "method": {
+          "added": [],
+          "removed": []
+        },
+        "position": {
+          "added": [],
+          "removed": []
+        },
+        "survey": {
+          "added": [],
+          "removed": []
+        },
+        "tool_system": {
+          "added": [],
+          "removed": []
+        }
+      }
+    }
+  }
+}

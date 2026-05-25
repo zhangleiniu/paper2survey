@@ -1,0 +1,10 @@
+bib_key,role_notes
+de2024simulation,A highly valuable theoretical analysis proving that looped transformers can simulate standard graph algorithms with size-independent parameters.
+georgiev2024deep,"Introduces an equilibrium-based approach (DEQ) to neural algorithmic reasoning, moving away from step-by-step recurrence."
+li2024open,"Proposes an open-book retrieval-augmented method for algorithmic reasoning, facilitating multi-task generalization."
+estermann2024puzzles,"Introduces PUZZLES, a high-quality evaluation benchmark focusing on logic and reinforcement learning within algorithmic reasoning."
+mcleish2024transformers,A highly cited and foundational method for improving arithmetic reasoning in transformers using relative digit position embeddings (Abacus Embeddings).
+sanford2024understanding,"Provides a rigorous, foundational analysis of transformer scaling regimes and representational capabilities when solving graph algorithms."
+rodionov2025discrete,Proposes decoupling discrete and continuous data flows for perfect out-of-distribution algorithmic generalization.
+he2025primal,Develops a primal-dual bipartite GNN framework targeting approximation algorithms for combinatorial problems.
+hashemi2026tropical,"Introduces Tropical Attention, a geometrically-grounded mechanism to enhance algorithmic reasoning for NP-hard problems."
