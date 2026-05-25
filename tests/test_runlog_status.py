@@ -42,9 +42,12 @@ def test_topic_status_reports_rounds_reviews_and_recent_runs(tmp_path: Path) -> 
     status = topic_status(topic, detailed=True)
 
     assert status["review_queue_items"] == 1
+    assert status["active_review_items"] == 1
+    assert status["stale_review_items"] == 0
     assert "round0" in status["rounds"]
     assert status["recent_runs"]
     assert status["review_items"][0]["bib_key"] == "smith2024widgets"
+    assert status["active_review_items_detail"][0]["bib_key"] == "smith2024widgets"
     assert recent_runs(topic)[0]["op_name"] == "noop"
 
 
@@ -84,3 +87,44 @@ def test_topic_status_reports_stale_bundles(tmp_path: Path) -> None:
     assert bundle_status["expected"] == 3
     assert bundle_status["missing"] == []
     assert bundle_status["stale"] == ["section_99_old_outline.md"]
+
+
+def test_topic_status_distinguishes_stale_review_items(tmp_path: Path) -> None:
+    topic = tmp_path / "mini_topic"
+    shutil.copytree(FIXTURE, topic)
+    (topic / "papers" / "smith2024widgets").mkdir(parents=True)
+    (topic / "papers" / "smith2024widgets" / "L2.md").write_text("fixed\n", encoding="utf-8")
+    (topic / "_review_needed.csv").write_text(
+        "bib_key,op_name,reason\n"
+        "smith2024widgets,summarize_L2,LLM returned empty L2 narrative\n"
+        "lee2023gadgets,summarize_L2,LLM returned empty L2 narrative\n",
+        encoding="utf-8",
+    )
+
+    status = topic_status(topic, detailed=True)
+
+    assert status["review_queue_items"] == 2
+    assert status["active_review_items"] == 1
+    assert status["stale_review_items"] == 1
+    assert status["active_review_items_detail"][0]["bib_key"] == "lee2023gadgets"
+    assert status["stale_review_items_detail"][0]["bib_key"] == "smith2024widgets"
+
+
+def test_topic_status_marks_resolved_assignment_review_as_stale(tmp_path: Path) -> None:
+    topic = tmp_path / "mini_topic"
+    shutil.copytree(FIXTURE, topic)
+    (topic / "section_assignments_v1.csv").write_text(
+        "bib_key,primary_section_path,secondary_section_paths,confidence,reason\n"
+        "smith2024widgets,1. Foundations / 1.1 Widget Surveys,,0.9,ok\n",
+        encoding="utf-8",
+    )
+    (topic / "_review_needed.csv").write_text(
+        "bib_key,op_name,reason\n"
+        "smith2024widgets,assign_section,missing input for assignment: topic/papers/smith2024widgets/L2.md\n",
+        encoding="utf-8",
+    )
+
+    status = topic_status(topic, detailed=True)
+
+    assert status["active_review_items"] == 0
+    assert status["stale_review_items"] == 1

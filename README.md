@@ -359,7 +359,7 @@ uv run survey topic status --topic my_topic
 uv run survey topic status --topic my_topic --detailed   # shows review queue
 ```
 
-The review queue (`_review_needed.csv`) accumulates items from all rounds: failed PDF parses, low-confidence triage, schema validation errors, low-confidence section assignments. Inspect it regularly.
+The review queue (`_review_needed.csv`) is an append-only history from all rounds: failed PDF parses, low-confidence triage, schema validation errors, low-confidence section assignments. `topic status --detailed` separates active items from stale items that have since been resolved by later reruns.
 
 ---
 

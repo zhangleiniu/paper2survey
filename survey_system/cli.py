@@ -89,7 +89,10 @@ def topic_status_command(
     if detailed:
         typer.echo(f"Topic: {status['topic_name']}")
         typer.echo(f"Included papers: {status['included_papers']}")
-        typer.echo(f"Review items: {status['review_queue_items']}")
+        typer.echo(
+            f"Review items: {status['review_queue_items']} "
+            f"(active={status['active_review_items']}, stale={status['stale_review_items']})"
+        )
         typer.echo("Rounds:")
         for name, info in status["rounds"].items():
             typer.echo(f"  {name}: {info}")
