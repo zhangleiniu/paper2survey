@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from survey_system.io.contracts import FailureItem, OpResult, PaperRow
 from survey_system.io.kb import (
@@ -41,6 +41,7 @@ def summarize_L2(
     limit: int | None = None,
     llm_client: LLMClient | None = None,
     workers: int = 1,
+    progress_callback: Callable[[str, int, int, PaperRow, str], None] | None = None,
 ) -> OpResult:
     _ = workers
     started = time.monotonic()
@@ -55,10 +56,12 @@ def summarize_L2(
     }
     prompt_template = _prompt_template("summarize_l2.txt")
 
-    for paper in papers:
+    total = len(papers)
+    for index, paper in enumerate(papers, start=1):
         l2_path = paper_l2_path(topic_path, paper.bib_key)
         if l2_path.exists() and l2_path.stat().st_size > 0 and not force:
             result.skipped.append(paper.bib_key)
+            _report_progress(progress_callback, "summarize_L2", index, total, paper, "skipped")
             continue
 
         try:
@@ -67,10 +70,12 @@ def summarize_L2(
             reason = "missing L1.json; run extract first"
             append_review_item(topic_path, paper.bib_key, "summarize_L2", reason)
             result.failed.append(FailureItem(bib_key=paper.bib_key, reason=reason))
+            _report_progress(progress_callback, "summarize_L2", index, total, paper, "failed")
             continue
 
         if dry_run:
             result.skipped.append(paper.bib_key)
+            _report_progress(progress_callback, "summarize_L2", index, total, paper, "skipped")
             continue
 
         prompt = _render_template(
@@ -88,6 +93,7 @@ def summarize_L2(
             reason = "LLM returned empty L2 narrative"
             append_review_item(topic_path, paper.bib_key, "summarize_L2", reason)
             result.failed.append(FailureItem(bib_key=paper.bib_key, reason=reason))
+            _report_progress(progress_callback, "summarize_L2", index, total, paper, "failed")
             continue
 
         word_count = len(narrative.split())
@@ -102,6 +108,7 @@ def summarize_L2(
         path = write_L2(topic_path, paper.bib_key, narrative)
         result.artifacts_written.append(path)
         result.processed.append(paper.bib_key)
+        _report_progress(progress_callback, "summarize_L2", index, total, paper, "processed")
 
     result.duration_seconds = time.monotonic() - started
     return result
@@ -116,6 +123,7 @@ def summarize_L3(
     limit: int | None = None,
     llm_client: LLMClient | None = None,
     workers: int = 1,
+    progress_callback: Callable[[str, int, int, PaperRow, str], None] | None = None,
 ) -> OpResult:
     _ = workers
     started = time.monotonic()
@@ -130,10 +138,12 @@ def summarize_L3(
     }
     prompt_template = _prompt_template("summarize_l3.txt")
 
-    for paper in papers:
+    total = len(papers)
+    for index, paper in enumerate(papers, start=1):
         l3_path = paper_l3_path(topic_path, paper.bib_key)
         if l3_path.exists() and l3_path.stat().st_size > 0 and not force:
             result.skipped.append(paper.bib_key)
+            _report_progress(progress_callback, "summarize_L3", index, total, paper, "skipped")
             continue
 
         try:
@@ -143,10 +153,12 @@ def summarize_L3(
             reason = f"missing input for L3: {exc.filename}"
             append_review_item(topic_path, paper.bib_key, "summarize_L3", reason)
             result.failed.append(FailureItem(bib_key=paper.bib_key, reason=reason))
+            _report_progress(progress_callback, "summarize_L3", index, total, paper, "failed")
             continue
 
         if dry_run:
             result.skipped.append(paper.bib_key)
+            _report_progress(progress_callback, "summarize_L3", index, total, paper, "skipped")
             continue
 
         prompt = _render_template(
@@ -167,14 +179,28 @@ def summarize_L3(
             reason = "LLM returned empty L3 sentence"
             append_review_item(topic_path, paper.bib_key, "summarize_L3", reason)
             result.failed.append(FailureItem(bib_key=paper.bib_key, reason=reason))
+            _report_progress(progress_callback, "summarize_L3", index, total, paper, "failed")
             continue
 
         path = write_L3(topic_path, paper.bib_key, sentence)
         result.artifacts_written.append(path)
         result.processed.append(paper.bib_key)
+        _report_progress(progress_callback, "summarize_L3", index, total, paper, "processed")
 
     result.duration_seconds = time.monotonic() - started
     return result
+
+
+def _report_progress(
+    progress_callback: Callable[[str, int, int, PaperRow, str], None] | None,
+    stage: str,
+    index: int,
+    total: int,
+    paper: PaperRow,
+    status: str,
+) -> None:
+    if progress_callback is not None:
+        progress_callback(stage, index, total, paper, status)
 
 
 def _select_papers(topic_path: Path, bib_key: str | None, limit: int | None) -> list[PaperRow]:

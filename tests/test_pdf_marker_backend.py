@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from survey_system.pdf.marker_backend import MarkerBackend, ParsedPdf
+from survey_system.pdf.marker_backend import MarkerBackend, ParsedPdf, _resolve_torch_device
 
 
 def test_parsed_pdf_defaults() -> None:
@@ -14,6 +14,14 @@ def test_parsed_pdf_defaults() -> None:
     assert parsed.markdown == ""
     assert parsed.images == {}
     assert parsed.page_count == 0
+
+
+def test_marker_auto_device_resolves_to_real_torch_device() -> None:
+    assert _resolve_torch_device("auto") in {"cpu", "cuda", "mps"}
+
+
+def test_marker_explicit_device_is_preserved() -> None:
+    assert _resolve_torch_device("cpu") == "cpu"
 
 
 def test_marker_backend_live_fixture() -> None:

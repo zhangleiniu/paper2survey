@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import csv
+import contextlib
 import json
 import logging
+import os
 import time
 from pathlib import Path
+from typing import Callable
 
 from survey_system.config import load_config
 from survey_system.io.contracts import FailureItem, OpResult, PaperRow
@@ -29,6 +32,7 @@ def parse_pdf(
     dry_run: bool = False,
     limit: int | None = None,
     backend: MarkerBackend | None = None,
+    progress_callback: Callable[[int, int, PaperRow, str], None] | None = None,
 ) -> OpResult:
     started = time.monotonic()
     config = load_config(topic_path)
@@ -45,13 +49,16 @@ def parse_pdf(
                 torch_device=config.marker.torch_device,
                 force_ocr=config.marker.force_ocr,
                 use_llm=config.marker.use_llm,
+                save_images=config.marker.save_images,
             )
 
-    for paper in papers:
+    total = len(papers)
+    for index, paper in enumerate(papers, start=1):
         l0_path = paper_l0_path(topic_path, paper.bib_key)
         if l0_path.exists() and l0_path.stat().st_size > 0 and not force:
             result.skipped.append(paper.bib_key)
             _log(logger, "skip_existing", paper.bib_key, str(l0_path))
+            _report_progress(progress_callback, index, total, paper, "skipped")
             continue
 
         pdf_path = pdfs_dir(topic_path) / paper.pdf_filename
@@ -60,33 +67,37 @@ def parse_pdf(
             _flag_review(topic_path, paper.bib_key, "parse_pdf", reason)
             result.failed.append(FailureItem(bib_key=paper.bib_key, reason=reason))
             _log(logger, "missing_pdf", paper.bib_key, str(pdf_path))
+            _report_progress(progress_callback, index, total, paper, "failed")
             continue
 
         if dry_run:
             result.skipped.append(paper.bib_key)
             _log(logger, "dry_run", paper.bib_key, str(pdf_path))
+            _report_progress(progress_callback, index, total, paper, "skipped")
             continue
 
         assert backend is not None
         try:
             parsed = _convert_with_retry(backend, pdf_path)
         except Exception as exc:
-            reason = f"Marker failed after retry: {exc}"
+            reason = f"PDF parsing failed after retry: {exc}"
             _flag_review(topic_path, paper.bib_key, "parse_pdf", reason)
             result.failed.append(FailureItem(bib_key=paper.bib_key, reason=reason))
-            _log(logger, "marker_failed", paper.bib_key, reason)
+            _log(logger, "pdf_parse_failed", paper.bib_key, reason)
+            _report_progress(progress_callback, index, total, paper, "failed")
             continue
 
         paper_artifacts_dir(topic_path, paper.bib_key).mkdir(parents=True, exist_ok=True)
         l0_path.write_text(parsed.markdown, encoding="utf-8")
         result.artifacts_written.append(l0_path)
 
-        image_dir = paper_images_dir(topic_path, paper.bib_key)
-        for filename, content in parsed.images.items():
-            image_dir.mkdir(parents=True, exist_ok=True)
-            image_path = image_dir / filename
-            image_path.write_bytes(content)
-            result.artifacts_written.append(image_path)
+        if config.marker.save_images:
+            image_dir = paper_images_dir(topic_path, paper.bib_key)
+            for filename, content in parsed.images.items():
+                image_dir.mkdir(parents=True, exist_ok=True)
+                image_path = image_dir / filename
+                image_path.write_bytes(content)
+                result.artifacts_written.append(image_path)
 
         if len(parsed.markdown.strip()) < config.marker.parse_pdf_min_chars:
             _flag_review(
@@ -98,6 +109,7 @@ def parse_pdf(
 
         result.processed.append(paper.bib_key)
         _log(logger, "processed", paper.bib_key, str(l0_path), page_count=parsed.page_count)
+        _report_progress(progress_callback, index, total, paper, "processed")
 
     result.duration_seconds = time.monotonic() - started
     return result
@@ -115,9 +127,26 @@ def _select_papers(topic_path: Path, bib_key: str | None, limit: int | None) -> 
 
 def _convert_with_retry(backend: MarkerBackend, pdf_path: Path):
     try:
-        return backend.convert(pdf_path)
+        return _convert_quietly(backend, pdf_path)
     except Exception:
-        return backend.convert(pdf_path)
+        return _convert_quietly(backend, pdf_path)
+
+
+def _convert_quietly(backend: MarkerBackend, pdf_path: Path):
+    with open(os.devnull, "w", encoding="utf-8") as devnull:
+        with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+            return backend.convert(pdf_path)
+
+
+def _report_progress(
+    progress_callback: Callable[[int, int, PaperRow, str], None] | None,
+    index: int,
+    total: int,
+    paper: PaperRow,
+    status: str,
+) -> None:
+    if progress_callback is not None:
+        progress_callback(index, total, paper, status)
 
 
 def _flag_review(topic_path: Path, bib_key: str, op_name: str, reason: str) -> None:

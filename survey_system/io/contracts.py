@@ -101,12 +101,20 @@ class MarkerConfig(BaseModel):
     force_ocr: bool = False
     use_llm: bool = False
     torch_device: str = "auto"
+    save_images: bool = False
     parse_pdf_min_chars: int = 1000
+
+
+class VertexAIConfig(BaseModel):
+    project: str | None = None
+    location: str = "global"
+    thinking_budget: int | None = None
 
 
 class TopicConfig(BaseModel):
     topic_name: str
     models: ModelTierConfig = Field(default_factory=ModelTierConfig)
+    vertexai: VertexAIConfig = Field(default_factory=VertexAIConfig)
     thresholds: ThresholdConfig = Field(default_factory=ThresholdConfig)
     marker: MarkerConfig = Field(default_factory=MarkerConfig)
     venue_tiers: dict[str, int] = Field(default_factory=dict)

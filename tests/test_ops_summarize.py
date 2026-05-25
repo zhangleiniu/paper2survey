@@ -72,7 +72,7 @@ def test_round1_cli_with_mocked_client(tmp_path: Path, monkeypatch) -> None:
 
     assert first.exit_code == 0
     assert second.exit_code == 0
-    assert '"processed": []' in second.output
+    assert "round1: processed=0 skipped=6 failed=0" in second.output
     assert "smith2024widgets" in second.output
 
 

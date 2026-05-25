@@ -19,10 +19,12 @@ class MarkerBackend:
         torch_device: str = "auto",
         force_ocr: bool = False,
         use_llm: bool = False,
+        save_images: bool = False,
     ) -> None:
         self.torch_device = torch_device
         self.force_ocr = force_ocr
         self.use_llm = use_llm
+        self.save_images = save_images
         self._converter: Any | None = None
 
     def convert(self, pdf_path: Path) -> ParsedPdf:
@@ -39,7 +41,7 @@ class MarkerBackend:
         markdown, _, images = text_from_rendered(rendered)
         return ParsedPdf(
             markdown=markdown,
-            images=_normalize_images(images),
+            images=_normalize_images(images) if self.save_images else {},
             page_count=_page_count(rendered),
         )
 
@@ -60,11 +62,11 @@ class MarkerBackend:
             "use_llm": self.use_llm,
             "output_format": "markdown",
         }
-        if self.torch_device != "auto":
-            config["torch_device"] = self.torch_device
+        torch_device = _resolve_torch_device(self.torch_device)
+        config["torch_device"] = torch_device
 
         try:
-            artifacts = create_model_dict(device=self.torch_device)
+            artifacts = create_model_dict(device=torch_device)
         except TypeError:
             artifacts = create_model_dict()
 
@@ -74,6 +76,25 @@ class MarkerBackend:
             self._converter = PdfConverter(artifact_dict=artifacts)
 
         return self._converter
+
+
+def _resolve_torch_device(torch_device: str) -> str:
+    if torch_device != "auto":
+        return torch_device
+
+    try:
+        import torch
+    except ImportError:
+        return "cpu"
+
+    if torch.cuda.is_available():
+        return "cuda"
+
+    mps = getattr(torch.backends, "mps", None)
+    if mps is not None and mps.is_available():
+        return "mps"
+
+    return "cpu"
 
 
 def _normalize_images(images: Any) -> dict[str, bytes]:

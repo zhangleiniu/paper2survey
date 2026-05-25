@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from pydantic import ValidationError
 
@@ -24,6 +24,7 @@ def triage(
     limit: int | None = None,
     llm_client: LLMClient | None = None,
     workers: int = 1,
+    progress_callback: Callable[[str, int, int, PaperRow, str], None] | None = None,
 ) -> OpResult:
     _ = workers
     started = time.monotonic()
@@ -34,10 +35,12 @@ def triage(
     schema = Meta.model_json_schema()
     prompt_template = _prompt_template("triage.txt")
 
-    for paper in papers:
+    total = len(papers)
+    for index, paper in enumerate(papers, start=1):
         meta_path = paper_meta_path(topic_path, paper.bib_key)
         if meta_path.exists() and meta_path.stat().st_size > 0 and not force:
             result.skipped.append(paper.bib_key)
+            _report_progress(progress_callback, "triage", index, total, paper, "skipped")
             continue
 
         try:
@@ -46,10 +49,12 @@ def triage(
             reason = "missing L0.md; run round0 first"
             append_review_item(topic_path, paper.bib_key, "triage", reason)
             result.failed.append(FailureItem(bib_key=paper.bib_key, reason=reason))
+            _report_progress(progress_callback, "triage", index, total, paper, "failed")
             continue
 
         if dry_run:
             result.skipped.append(paper.bib_key)
+            _report_progress(progress_callback, "triage", index, total, paper, "skipped")
             continue
 
         prompt = _render_template(prompt_template, excerpt)
@@ -63,6 +68,7 @@ def triage(
             append_review_item(topic_path, paper.bib_key, "triage", reason)
             result.failed.append(FailureItem(bib_key=paper.bib_key, reason=reason))
             result.artifacts_written.append(path)
+            _report_progress(progress_callback, "triage", index, total, paper, "failed")
             continue
 
         try:
@@ -71,11 +77,13 @@ def triage(
             reason = f"meta schema validation failed: {exc}"
             append_review_item(topic_path, paper.bib_key, "triage", reason)
             result.failed.append(FailureItem(bib_key=paper.bib_key, reason=reason))
+            _report_progress(progress_callback, "triage", index, total, paper, "failed")
             continue
 
         path = write_meta(topic_path, paper.bib_key, meta)
         result.artifacts_written.append(path)
         result.processed.append(paper.bib_key)
+        _report_progress(progress_callback, "triage", index, total, paper, "processed")
 
         if meta.paper_type_confidence < config.thresholds.triage_confidence_review_below:
             append_review_item(
@@ -87,6 +95,18 @@ def triage(
 
     result.duration_seconds = time.monotonic() - started
     return result
+
+
+def _report_progress(
+    progress_callback: Callable[[str, int, int, PaperRow, str], None] | None,
+    stage: str,
+    index: int,
+    total: int,
+    paper: PaperRow,
+    status: str,
+) -> None:
+    if progress_callback is not None:
+        progress_callback(stage, index, total, paper, status)
 
 
 def _select_papers(topic_path: Path, bib_key: str | None, limit: int | None) -> list[PaperRow]:

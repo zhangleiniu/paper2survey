@@ -45,6 +45,27 @@ def _echo_result(result: OpResult) -> None:
     typer.echo(json.dumps(result.model_dump(mode="json"), indent=2))
 
 
+def _echo_summary(result: OpResult) -> None:
+    typer.echo(
+        f"{result.op_name}: processed={len(result.processed)} "
+        f"skipped={len(result.skipped)} failed={len(result.failed)} "
+        f"duration={result.duration_seconds:.1f}s"
+    )
+    if result.failed:
+        typer.echo("Failed papers:")
+        for failure in result.failed:
+            key = failure.bib_key or "<global>"
+            typer.echo(f"  {key}: {failure.reason}")
+
+
+def _echo_parse_progress(index: int, total: int, paper, status: str) -> None:
+    typer.echo(f"[{index}/{total}] {status}: {paper.bib_key}")
+
+
+def _echo_llm_progress(stage: str, index: int, total: int, paper, status: str) -> None:
+    typer.echo(f"{stage} [{index}/{total}] {status}: {paper.bib_key}")
+
+
 def _echo_logged(topic: Path, result: OpResult) -> None:
     write_run_log(topic, result)
     _echo_result(result)
@@ -127,7 +148,15 @@ def run_parse_pdf(
     limit: LimitOption = None,
     force: ForceOption = False,
 ) -> None:
-    _echo_logged(topic, parse_pdf.parse_pdf(topic, bib_key=bib_key, limit=limit, force=force))
+    result = parse_pdf.parse_pdf(
+        topic,
+        bib_key=bib_key,
+        limit=limit,
+        force=force,
+        progress_callback=_echo_parse_progress,
+    )
+    write_run_log(topic, result)
+    _echo_summary(result)
 
 
 @run_app.command("round0")
@@ -136,7 +165,14 @@ def run_round0(
     limit: LimitOption = None,
     force: ForceOption = False,
 ) -> None:
-    _echo_logged(topic, parse_pdf.parse_pdf(topic, limit=limit, force=force))
+    result = parse_pdf.parse_pdf(
+        topic,
+        limit=limit,
+        force=force,
+        progress_callback=_echo_parse_progress,
+    )
+    write_run_log(topic, result)
+    _echo_summary(result)
 
 
 @run_app.command("triage")
@@ -158,9 +194,25 @@ def run_round1(
     workers: WorkersOption = 1,
 ) -> None:
     client = LLMClient.from_topic(topic)
-    triage_result = triage.triage(topic, limit=limit, force=force, llm_client=client, workers=workers)
-    l3_result = summarize.summarize_L3(topic, limit=limit, force=force, llm_client=client, workers=workers)
-    _echo_logged(topic, _combine_results("round1", [triage_result, l3_result]))
+    triage_result = triage.triage(
+        topic,
+        limit=limit,
+        force=force,
+        llm_client=client,
+        workers=workers,
+        progress_callback=_echo_llm_progress,
+    )
+    l3_result = summarize.summarize_L3(
+        topic,
+        limit=limit,
+        force=force,
+        llm_client=client,
+        workers=workers,
+        progress_callback=_echo_llm_progress,
+    )
+    result = _combine_results("round1", [triage_result, l3_result])
+    write_run_log(topic, result)
+    _echo_summary(result)
 
 
 @run_app.command("extract")

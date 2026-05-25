@@ -74,6 +74,16 @@ def test_parse_pdf_processes_included_papers(topic: Path) -> None:
     l0 = topic / "papers" / "smith2024widgets" / "L0.md"
     image = topic / "papers" / "smith2024widgets" / "_images" / "smith2024widgets.png"
     assert "# smith2024widgets" in l0.read_text(encoding="utf-8")
+    assert not image.exists()
+
+
+def test_parse_pdf_saves_images_when_enabled(topic: Path) -> None:
+    _set_marker_save_images(topic)
+    backend = FakeBackend()
+
+    parse_pdf(topic, bib_key="smith2024widgets", backend=backend)
+
+    image = topic / "papers" / "smith2024widgets" / "_images" / "smith2024widgets.png"
     assert image.read_bytes() == b"image-bytes"
 
 
@@ -101,6 +111,24 @@ def test_parse_pdf_limit(topic: Path) -> None:
 
     assert result.processed == ["smith2024widgets"]
     assert len(backend.calls) == 1
+
+
+def test_parse_pdf_reports_progress(topic: Path) -> None:
+    progress = []
+
+    parse_pdf(
+        topic,
+        limit=2,
+        backend=FakeBackend(),
+        progress_callback=lambda index, total, paper, status: progress.append(
+            (index, total, paper.bib_key, status)
+        ),
+    )
+
+    assert progress == [
+        (1, 2, "smith2024widgets", "processed"),
+        (2, 2, "lee2023gadgets", "processed"),
+    ]
 
 
 def test_parse_pdf_missing_pdf_is_reviewed(topic: Path) -> None:
@@ -138,7 +166,7 @@ def test_parse_pdf_flags_marker_failure_after_retry(topic: Path) -> None:
 
     assert result.failed[0].bib_key == "smith2024widgets"
     assert backend.calls == 2
-    assert "Marker failed after retry" in _review_rows(topic)[0]["reason"]
+    assert "PDF parsing failed after retry" in _review_rows(topic)[0]["reason"]
 
 
 def test_cli_instantiates_marker_backend_once(topic: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -155,6 +183,28 @@ def test_cli_instantiates_marker_backend_once(topic: Path, monkeypatch: pytest.M
     assert FakeBackend.instances == 1
 
 
+def test_cli_round0_prints_progress_summary(topic: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from typer.testing import CliRunner
+
+    from survey_system.cli import app
+
+    monkeypatch.setattr(parse_pdf_module, "MarkerBackend", FakeBackend)
+
+    result = CliRunner().invoke(app, ["run", "round0", "--topic", str(topic)])
+
+    assert result.exit_code == 0
+    assert "[1/3] processed: smith2024widgets" in result.output
+    assert "parse_pdf: processed=3 skipped=0 failed=0" in result.output
+    assert '"processed": [' not in result.output
+
+
 def _review_rows(topic: Path) -> list[dict[str, str]]:
     with (topic / "_review_needed.csv").open("r", encoding="utf-8", newline="") as handle:
         return list(csv.DictReader(handle))
+
+
+def _set_marker_save_images(topic: Path) -> None:
+    config = topic / "config.yaml"
+    text = config.read_text(encoding="utf-8")
+    text = text.replace("  parse_pdf_min_chars: 10", "  save_images: true\n  parse_pdf_min_chars: 10")
+    config.write_text(text, encoding="utf-8")

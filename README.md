@@ -107,18 +107,25 @@ models:
   outline: claude-sonnet-4-6
   assign: claude-haiku-4-5-20251001
 
+# Vertex AI settings, only used when models.provider is vertexai.
+# These may be omitted if GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION are set.
+vertexai:
+  project: my-project-id
+  location: global
+
 # Quality thresholds — items below these values go to _review_needed.csv.
 thresholds:
   triage_confidence_review_below: 0.7
   assign_confidence_review_below: 0.7
   parse_pdf_min_chars: 1000   # L0 shorter than this triggers review
 
-# PDF parsing (only relevant when using Marker).
+# PDF parsing. Use pymupdf for fast text-only extraction, marker for richer layout/table parsing.
 marker:
   torch_device: auto    # auto | cpu | cuda | mps
   force_ocr: false      # true = OCR every page even on digital PDFs
   use_llm: false        # true = Marker's LLM-assisted mode (extra API cost)
-  backend: marker       # marker (default) | pymupdf (faster, less accurate)
+  save_images: false    # true = save extracted images under papers/<bib_key>/_images/
+  backend: marker       # marker (richer, slower) | pymupdf (faster text extraction)
 ```
 
 ### `pdfs/`
@@ -152,29 +159,34 @@ Round 7  Write each section (manual, in a chat interface)
 
 For Anthropic, set `ANTHROPIC_API_KEY` for Rounds 1–6. For OpenAI, set `OPENAI_API_KEY` and `models.provider: openai` in `config.yaml`.
 
-For Vertex AI, authenticate with Application Default Credentials and set the Google Cloud project/location before running LLM-backed rounds:
+For Vertex AI, authenticate with Application Default Credentials before running LLM-backed rounds:
 
 ```bash
 gcloud auth application-default login
-export GOOGLE_CLOUD_PROJECT=my-project-id
-export GOOGLE_CLOUD_LOCATION=us-central1
-export GOOGLE_GENAI_USE_VERTEXAI=True
 ```
 
-Then use Vertex AI Gemini model IDs in `config.yaml`:
+Then use Vertex AI Gemini model IDs and project settings in `config.yaml`:
 
 ```yaml
 models:
   provider: vertexai
-  cheap: gemini-2.5-flash
-  capable: gemini-2.5-pro
+  cheap: gemini-3.5-flash
+  capable: gemini-3.5-flash
+
+vertexai:
+  project: my-project-id
+  location: global
 ```
+
+If `vertexai.project` or `vertexai.location` is omitted, the backend falls back to `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION`.
 
 ---
 
 ### Round 0 — PDF parsing
 
-Converts each `pdfs/<pdf_filename>` into `papers/<bib_key>/L0.md` (full-text markdown). Requires Marker (`uv sync --extra marker`).
+Converts each `pdfs/<pdf_filename>` into `papers/<bib_key>/L0.md` (full-text markdown).
+
+For fast text-only extraction, set `marker.backend: pymupdf` in `config.yaml`. For richer layout/table extraction, set `marker.backend: marker` and install Marker (`uv sync --extra marker`).
 
 ```bash
 uv run survey run round0 --topic my_topic

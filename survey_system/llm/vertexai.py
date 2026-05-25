@@ -6,8 +6,17 @@ from typing import Any
 
 
 class VertexAIBackend:
-    def __init__(self, client: Any | None = None) -> None:
+    def __init__(
+        self,
+        client: Any | None = None,
+        project: str | None = None,
+        location: str | None = None,
+        thinking_budget: int | None = None,
+    ) -> None:
         self._client = client
+        self._project = project
+        self._location = location
+        self._thinking_budget = thinking_budget
 
     @property
     def client(self):
@@ -20,13 +29,13 @@ class VertexAIBackend:
                     "google-genai is not installed. Install project dependencies with: uv sync"
                 ) from exc
 
-            project = os.environ.get("GOOGLE_CLOUD_PROJECT")
-            location = os.environ.get("GOOGLE_CLOUD_LOCATION")
+            project = self._project or os.environ.get("GOOGLE_CLOUD_PROJECT")
+            location = self._location or os.environ.get("GOOGLE_CLOUD_LOCATION")
             missing = [
                 name
                 for name, value in {
-                    "GOOGLE_CLOUD_PROJECT": project,
-                    "GOOGLE_CLOUD_LOCATION": location,
+                    "vertexai.project or GOOGLE_CLOUD_PROJECT": project,
+                    "vertexai.location or GOOGLE_CLOUD_LOCATION": location,
                 }.items()
                 if not value
             ]
@@ -35,7 +44,8 @@ class VertexAIBackend:
                 raise RuntimeError(
                     f"Vertex AI requires {joined}. Authenticate with "
                     "`gcloud auth application-default login`, then set "
-                    "GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION."
+                    "vertexai.project and vertexai.location in config.yaml "
+                    "or the matching GOOGLE_CLOUD_* environment variables."
                 )
 
             self._client = genai.Client(
@@ -53,20 +63,28 @@ class VertexAIBackend:
         model_id: str,
         max_tokens: int = 4096,
     ) -> dict[str, Any]:
+        config: dict[str, Any] = {
+            "response_mime_type": "application/json",
+            "response_json_schema": schema,
+            "max_output_tokens": max_tokens,
+        }
+        if self._thinking_budget is not None:
+            config["thinking_config"] = {"thinking_budget": self._thinking_budget}
+
         response = self.client.models.generate_content(
             model=model_id,
             contents=prompt,
-            config={
-                "response_mime_type": "application/json",
-                "response_json_schema": schema,
-                "max_output_tokens": max_tokens,
-            },
+            config=config,
         )
         parsed = getattr(response, "parsed", None)
         if isinstance(parsed, dict):
             return parsed
 
-        content = getattr(response, "text", None) or "{}"
+        content = getattr(response, "text", None)
+        if not content:
+            finish_reason = _finish_reason(response)
+            detail = f" finish_reason={finish_reason}" if finish_reason else ""
+            raise RuntimeError(f"Vertex AI response did not include text.{detail}")
         try:
             result = json.loads(content)
         except json.JSONDecodeError as exc:
@@ -74,3 +92,10 @@ class VertexAIBackend:
         if not isinstance(result, dict):
             raise RuntimeError("Vertex AI response JSON was not an object")
         return result
+
+
+def _finish_reason(response: Any) -> str | None:
+    candidates = getattr(response, "candidates", None)
+    if not candidates:
+        return None
+    return getattr(candidates[0], "finish_reason", None)

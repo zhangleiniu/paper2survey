@@ -42,10 +42,16 @@ def test_llm_client_uses_configured_provider() -> None:
 def test_llm_client_uses_vertexai_provider() -> None:
     config = load_config(__import__("pathlib").Path("tests/fixtures/mini_topic"))
     config.models.provider = "vertexai"
+    config.vertexai.project = "test-project"
+    config.vertexai.location = "global"
+    config.vertexai.thinking_budget = 0
 
     client = LLMClient(config)
 
     assert client.backend.__class__.__name__ == "VertexAIBackend"
+    assert client.backend._project == "test-project"
+    assert client.backend._location == "global"
+    assert client.backend._thinking_budget == 0
 
 
 def test_anthropic_backend_returns_forced_tool_input() -> None:
@@ -110,7 +116,7 @@ def test_vertexai_backend_parses_json_response() -> None:
         models=SimpleNamespace(generate_content=generate_content)
     )
 
-    result = VertexAIBackend(fake_client).complete_structured(
+    result = VertexAIBackend(fake_client, thinking_budget=0).complete_structured(
         "prompt",
         Meta.model_json_schema(),
         "gemini-test",
@@ -123,6 +129,7 @@ def test_vertexai_backend_parses_json_response() -> None:
     assert calls["config"]["response_mime_type"] == "application/json"
     assert calls["config"]["response_json_schema"] == Meta.model_json_schema()
     assert calls["config"]["max_output_tokens"] == 512
+    assert calls["config"]["thinking_config"] == {"thinking_budget": 0}
 
 
 @pytest.mark.live

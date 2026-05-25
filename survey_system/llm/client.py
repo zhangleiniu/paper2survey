@@ -73,5 +73,9 @@ class LLMClient:
         if provider == "openai":
             return OpenAIBackend()
         if provider in {"vertexai", "vertex", "google_vertex"}:
-            return VertexAIBackend()
+            return VertexAIBackend(
+                project=self.config.vertexai.project,
+                location=self.config.vertexai.location,
+                thinking_budget=self.config.vertexai.thinking_budget,
+            )
         raise ValueError(f"Unknown LLM provider: {provider}")

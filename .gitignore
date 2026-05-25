@@ -26,3 +26,15 @@ dist/
 .idea/
 .vscode/
 .DS_Store
+
+# Survey workspace artifacts
+*.pdf
+*_images/
+**/_runs/*.log
+**/_review_needed.csv
+**/papers/*/L0.md
+**/papers/*/L1.json
+**/papers/*/L2.md
+**/papers/*/L3.txt
+**/papers/*/meta.json
+**/bundles/*.md

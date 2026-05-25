@@ -12,5 +12,7 @@ def test_load_config() -> None:
     assert config.topic_name == "mini_topic"
     assert config.marker.force_ocr is False
     assert config.marker.torch_device == "cpu"
+    assert config.marker.save_images is False
     assert config.marker.parse_pdf_min_chars == 10
+    assert config.vertexai.location == "global"
     assert config.venue_tiers["FakeConf"] == 1
