@@ -20,6 +20,10 @@ def test_topic_paths() -> None:
     assert paths.anchors_csv(TOPIC) == TOPIC / "anchors.csv"
     assert paths.anchors_candidates_csv(TOPIC) == TOPIC / "anchors_candidates_v1.csv"
     assert paths.runs_dir(TOPIC) == TOPIC / "_runs"
+    assert paths.status_dir(TOPIC) == TOPIC / "_status"
+    assert paths.analysis_dir(TOPIC) == TOPIC / "_analysis"
+    assert paths.paper_status_csv(TOPIC) == TOPIC / "_status" / "papers.csv"
+    assert paths.paper_matrix_csv(TOPIC) == TOPIC / "_analysis" / "paper_matrix.csv"
 
 
 def test_paper_artifact_paths() -> None:

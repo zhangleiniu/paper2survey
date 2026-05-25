@@ -15,6 +15,11 @@ from survey_system.io.outline import inspect_outline
 from survey_system.io.papers import read_papers
 from survey_system.io.runlog import write_run_log
 from survey_system.io.schemas import current_schema_version, inspect_schema_payload, load_schema_payload
+from survey_system.io.tables import (
+    write_all_tables,
+    write_paper_matrix_table,
+    write_paper_status_table,
+)
 from survey_system.llm.client import LLMClient
 from survey_system.ops import (
     assign_section,
@@ -71,7 +76,15 @@ def _echo_llm_progress(stage: str, index: int, total: int, paper, status: str) -
 
 def _echo_logged(topic: Path, result: OpResult) -> None:
     write_run_log(topic, result)
+    _refresh_tables_quietly(topic)
     _echo_result(result)
+
+
+def _refresh_tables_quietly(topic: Path) -> None:
+    try:
+        write_all_tables(topic)
+    except (FileNotFoundError, KeyError, ValueError):
+        return
 
 
 @topic_app.command("init")
@@ -232,6 +245,25 @@ def topic_inspect_assignments(
         raise typer.Exit(code=1)
 
 
+@topic_app.command("paper-status")
+def topic_paper_status(topic: TopicOption) -> None:
+    path = write_paper_status_table(topic)
+    typer.echo(f"Wrote {path}")
+
+
+@topic_app.command("paper-matrix")
+def topic_paper_matrix(topic: TopicOption) -> None:
+    path = write_paper_matrix_table(topic)
+    typer.echo(f"Wrote {path}")
+
+
+@topic_app.command("export-tables")
+def topic_export_tables(topic: TopicOption) -> None:
+    paths = write_all_tables(topic)
+    for path in paths:
+        typer.echo(f"Wrote {path}")
+
+
 @run_app.command("parse-pdf")
 def run_parse_pdf(
     topic: TopicOption,
@@ -247,6 +279,7 @@ def run_parse_pdf(
         progress_callback=_echo_parse_progress,
     )
     write_run_log(topic, result)
+    _refresh_tables_quietly(topic)
     _echo_summary(result)
 
 
@@ -263,6 +296,7 @@ def run_round0(
         progress_callback=_echo_parse_progress,
     )
     write_run_log(topic, result)
+    _refresh_tables_quietly(topic)
     _echo_summary(result)
 
 
@@ -303,6 +337,7 @@ def run_round1(
     )
     result = _combine_results("round1", [triage_result, l3_result])
     write_run_log(topic, result)
+    _refresh_tables_quietly(topic)
     _echo_summary(result)
 
 

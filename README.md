@@ -169,6 +169,7 @@ Use the status and inspection commands as quality gates between rounds:
 
 ```bash
 uv run survey topic status --topic my_topic --detailed
+uv run survey topic export-tables --topic my_topic
 uv run survey topic inspect-schema --topic my_topic --version v2
 uv run survey topic inspect-outline --topic my_topic
 uv run survey topic inspect-assignments --topic my_topic
@@ -406,6 +407,16 @@ uv run survey topic status --topic my_topic --detailed   # shows review queue
 The review queue (`_review_needed.csv`) is an append-only history from all rounds: failed PDF parses, low-confidence triage, schema validation errors, low-confidence section assignments. `topic status --detailed` separates active items from stale items that have since been resolved by later reruns.
 
 Status is derived from current files, not just the existence of an artifact. For example, Round 6 assignments are complete only when every included paper has an assignment, and bundles are complete only when the bundle files match the current outline with no stale files.
+
+For spreadsheet review, generate the derived tables:
+
+```bash
+uv run survey topic paper-status --topic my_topic   # writes _status/papers.csv
+uv run survey topic paper-matrix --topic my_topic   # writes _analysis/paper_matrix.csv
+uv run survey topic export-tables --topic my_topic  # writes both
+```
+
+`_status/papers.csv` is a fixed-column pipeline table: one row per paper, with PDF/L0/meta/L1/L2/assignment/bundle status and active/stale review reasons. `_analysis/paper_matrix.csv` is a schema-driven content table: fixed identity columns plus dynamic `universal.*` and `type_specific.<paper_type>.*` columns from the current schema. `survey run ...` commands refresh these tables after each run when the topic has enough files to build them.
 
 ---
 

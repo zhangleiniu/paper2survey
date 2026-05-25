@@ -133,6 +133,8 @@ Every human gate should have a small, explicit inspection surface:
 | Outline finalization | `outline.md` | `survey topic inspect-outline` | full candidate proposal copied as final outline |
 | Assignment review | `section_assignments_v1.csv` | `survey topic inspect-assignments` | missing papers, overload, low confidence |
 | Whole pipeline status | topic directory | `survey topic status --detailed` | incomplete coverage, stale bundles, stale review items |
+| Per-paper pipeline state | `_status/papers.csv` | `survey topic paper-status` | which paper failed or still needs review |
+| Per-paper content matrix | `_analysis/paper_matrix.csv` | `survey topic paper-matrix` | cross-paper comparison by schema fields |
 
 Inspection commands must not mutate state. They are deliberately separate from the ops that generate artifacts.
 
@@ -683,6 +685,12 @@ topics/<topic_name>/
         triage_20260518T120000.log
         extract_20260518T150000.log
         ...
+
+    _status/
+        papers.csv                      # Derived per-paper pipeline status
+
+    _analysis/
+        paper_matrix.csv                # Derived schema-backed content matrix
 
     _review_needed.csv                  # Cross-op human review queue
     R1_distribution.csv                 # Per-round summary statistics

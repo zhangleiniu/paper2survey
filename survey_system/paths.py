@@ -87,5 +87,21 @@ def runs_dir(topic_path: Path) -> Path:
     return topic_root(topic_path) / "_runs"
 
 
+def status_dir(topic_path: Path) -> Path:
+    return topic_root(topic_path) / "_status"
+
+
+def analysis_dir(topic_path: Path) -> Path:
+    return topic_root(topic_path) / "_analysis"
+
+
+def paper_status_csv(topic_path: Path) -> Path:
+    return status_dir(topic_path) / "papers.csv"
+
+
+def paper_matrix_csv(topic_path: Path) -> Path:
+    return analysis_dir(topic_path) / "paper_matrix.csv"
+
+
 def review_needed_csv(topic_path: Path) -> Path:
     return topic_root(topic_path) / "_review_needed.csv"

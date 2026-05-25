@@ -73,4 +73,5 @@
 - `inspect-outline` exists because outline quality cannot be judged from file presence. It checks for candidate artifacts, duplicate section paths, shallow structures, and suspicious headings before Round 6.
 - `inspect-assignments` is the review surface for Round 6. It reports coverage, primary section counts, empty sections, overloaded sections, low-confidence rows, and invalid primary paths.
 - Forced bundle rebuilds remove stale bundle markdown files before writing the current bundle set. This keeps `bundles/` aligned with the current outline rather than preserving old section files.
+- Per-paper CSV tables are derived artifacts. `_status/papers.csv` uses fixed columns for pipeline state and review reasons; `_analysis/paper_matrix.csv` uses the current schema to expose dynamic content fields for cross-paper comparison.
 - Round 7 remains a manual writing stage. The supported final output is a set of section bundles, schema-backed paper extractions, L2 narratives, and quality reports that a human can use to draft a survey.

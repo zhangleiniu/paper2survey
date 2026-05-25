@@ -602,6 +602,9 @@ Make the system suitable for long-term use: logging, status queries, concurrency
 - Alternative PDF backend (optional): pluggable in `pdf/` as `pymupdf_backend.py`, selected via config. Faster and lighter than Marker for digital PDFs without complex tables/equations.
 - `topic inspect-outline`: detect copied candidate proposal content before Round 6
 - `topic inspect-assignments`: report coverage, section counts, empty/overloaded sections, low confidence rows, invalid sections
+- `topic paper-status`: write `_status/papers.csv`, a fixed-column per-paper pipeline status table
+- `topic paper-matrix`: write `_analysis/paper_matrix.csv`, a schema-driven content matrix with dynamic L1 columns
+- `topic export-tables`: write both derived tables; run commands refresh them quietly after successful logging when possible
 - Forced bundle rebuilds remove stale bundle markdown files that no longer correspond to the current outline
 
 ### Acceptance criteria
@@ -610,6 +613,8 @@ Make the system suitable for long-term use: logging, status queries, concurrency
 - [ ] `topic status` prints per-round completion for mini_topic and distinguishes active vs stale review items
 - [ ] `topic status` marks Round 6 assignments incomplete if assignment rows do not cover every included paper
 - [ ] `topic status` marks bundles incomplete if stale bundle files remain
+- [ ] `topic export-tables` writes `_status/papers.csv` and `_analysis/paper_matrix.csv`
+- [ ] `_analysis/paper_matrix.csv` includes `universal.*` and `type_specific.<paper_type>.*` columns from the current schema
 - [ ] `inspect-outline` rejects an `outline.md` that still contains `# Candidate ...`
 - [ ] `inspect-assignments` reports overloaded sections and low-confidence rows
 - [ ] `--workers 4` on `extract` is measurably faster than `--workers 1` (even on a small fixture)

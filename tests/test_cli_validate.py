@@ -63,3 +63,15 @@ def test_topic_inspect_assignments_reports_counts(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert "Assigned: 3/3" in result.output
     assert "Section counts:" in result.output
+
+
+def test_topic_export_tables_writes_status_and_matrix(tmp_path: Path) -> None:
+    topic = tmp_path / "mini_topic"
+    shutil.copytree(FIXTURE, topic)
+
+    result = runner.invoke(app, ["topic", "export-tables", "--topic", str(topic)])
+
+    assert result.exit_code == 0
+    assert "Wrote" in result.output
+    assert (topic / "_status" / "papers.csv").exists()
+    assert (topic / "_analysis" / "paper_matrix.csv").exists()

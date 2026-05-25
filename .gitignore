@@ -31,6 +31,8 @@ dist/
 *.pdf
 *_images/
 **/_runs/*.log
+**/_status/
+**/_analysis/
 **/_review_needed.csv
 **/papers/*/L0.md
 **/papers/*/L1.json
