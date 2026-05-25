@@ -64,6 +64,19 @@ def test_build_bundles_without_anchors_uses_papers_block(tmp_path: Path) -> None
     assert "## Papers" in text
 
 
+def test_build_bundles_force_removes_stale_bundle_files(tmp_path: Path) -> None:
+    topic = _topic_with_bundle_inputs(tmp_path)
+    stale = topic / "bundles" / "section_99_old_outline.md"
+    stale.parent.mkdir(parents=True)
+    stale.write_text("stale\n", encoding="utf-8")
+
+    result = build_bundles(topic, force=True)
+
+    assert not stale.exists()
+    assert "stale_bundle:section_99_old_outline.md" in result.processed
+    assert (topic / "bundles" / "section_01_1_foundations_1_1_widget_surveys.md").exists()
+
+
 def _topic_with_bundle_inputs(tmp_path: Path) -> Path:
     topic = tmp_path / "mini_topic"
     shutil.copytree(FIXTURE, topic)

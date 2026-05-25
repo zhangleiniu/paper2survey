@@ -33,9 +33,19 @@ def build_bundles(
     anchors = _anchor_keys(topic_path)
     schema = load_current_schema(topic_path)
     output_dir = bundles_dir(topic_path)
+    expected_paths = {
+        output_dir / _bundle_filename(index, section)
+        for index, section in enumerate(sections, start=1)
+    }
+
+    if force and output_dir.exists() and not dry_run:
+        for stale_path in sorted(output_dir.glob("*.md")):
+            if stale_path not in expected_paths:
+                stale_path.unlink()
+                result.processed.append(f"stale_bundle:{stale_path.name}")
 
     for index, section in enumerate(sections, start=1):
-        output_path = output_dir / f"section_{index:02d}_{section.slug}.md"
+        output_path = output_dir / _bundle_filename(index, section)
         if output_path.exists() and output_path.stat().st_size > 0 and not force:
             result.skipped.append(section.path)
             continue
@@ -73,6 +83,10 @@ def build_bundles(
 
     result.duration_seconds = time.monotonic() - started
     return result
+
+
+def _bundle_filename(index: int, section: OutlineSection) -> str:
+    return f"section_{index:02d}_{section.slug}.md"
 
 
 def _read_assignments(path: Path) -> list[dict[str, str]]:
